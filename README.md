@@ -1,23 +1,45 @@
-# n8n Marden Site Builder
+# Marden Site Builder - N8N Workflow
 
-This repository contains the n8n workflows for the Marden site integration project, implementing the middleware layer between a React+Vite frontend and a WordPress backend.
+This repository contains a complete N8N workflow for connecting a React+Vite frontend application to a WordPress backend. The workflow provides a set of API endpoints that make it easy to integrate WordPress content into any frontend application.
 
 ## Overview
 
-The Marden site builder workflow provides a series of webhook endpoints that facilitate communication between the frontend and backend systems:
+The Marden site builder workflow implements the middleware layer between a React+Vite frontend and a WordPress backend, following the architecture described in the "The seamless mesh: n8n, React+Vite, and WordPress integration" document.
 
-1. **Content Retrieval**: Fetch WordPress posts and pages with proper formatting for the React frontend
-2. **Post Listing**: Get paginated lists of posts with filtering options
-3. **Menu Retrieval**: Get WordPress navigation menus in a hierarchical format
-4. **Authentication**: JWT-based authentication with token validation
-5. **Form Submission**: Secure form submission with validation
-6. **Content Synchronization**: Two-way content sync with cache invalidation
+## Features
+
+- **Content Retrieval**: Fetch WordPress posts and pages with proper formatting for the React frontend
+- **Post Listing**: Get paginated lists of posts with filtering options
+- **Menu Retrieval**: Get WordPress navigation menus in a hierarchical format
+- **Authentication**: JWT-based authentication with token validation
+- **Form Submission**: Secure form submission with validation
+- **Content Synchronization**: Two-way content sync with cache invalidation
+
+## Endpoints
+
+### Content Endpoints
+
+- `GET /webhook/content` - Get all posts with full content
+- `GET /webhook/list-posts` - List posts with pagination and filtering
+- `GET /webhook/get-menus` - Get WordPress menus
+- `GET /webhook/post` - Get a single post by ID
+
+### Authentication Endpoints
+
+- `POST /webhook/auth` - Authenticate with WordPress
+- `POST /webhook/auth/validate` - Validate JWT token
+
+### Form Handling
+
+- `POST /webhook/forms/submit` - Submit form data to WordPress
+
+### Content Synchronization
+
+- `POST /webhook/sync-content` - Sync content and invalidate frontend cache
 
 ## Implementation Details
 
-The workflow implements the architecture described in the "The seamless mesh: n8n, React+Vite, and WordPress integration" document, which provides a comprehensive overview of the integration approach.
-
-### Key Features
+The workflow implements several key features:
 
 - **Authentication Flow**: JWT-based authentication with secure token handling
 - **Content Transformation**: WordPress content is transformed into optimized JSON for the React frontend
@@ -25,28 +47,28 @@ The workflow implements the architecture described in the "The seamless mesh: n8
 - **Error Handling**: Comprehensive error handling for all API endpoints
 - **Caching Strategy**: Cache-Control headers for improved performance
 
-## Setup Instructions
+## Installation
 
-1. Import the workflow into your n8n instance
-2. Update the placeholder credentials:
-   - `YOUR_WORDPRESS_CREDENTIAL_ID`: Set up WordPress credentials in n8n
-   - `YOUR_SHARED_SECRET_HERE`: Configure a shared secret for form submissions
-   - `YOUR_CONTENT_SYNC_API_KEY`: Set up an API key for content synchronization
-3. Configure your WordPress site with the required plugins and REST API settings
-4. Update the React frontend to use these webhook endpoints
+1. Import the workflow JSON file into your N8N instance
+2. Configure WordPress credentials in the workflow
+3. Activate the workflow
 
-## Webhook Endpoints
+## Configuration
 
-The workflow provides the following endpoints:
+You need to update the following credentials in the workflow:
 
-- `/webhook/content`: Get all WordPress content
-- `/webhook/list-posts`: Get paginated list of posts
-- `/webhook/get-menus`: Get navigation menus
-- `/webhook/auth`: Authenticate with WordPress
-- `/webhook/auth/validate`: Validate JWT tokens
-- `/webhook/forms/submit`: Submit form data
-- `/webhook/sync-content`: Synchronize content updates
-- `/webhook/post`: Get a single post by ID
+1. `YOUR_WORDPRESS_CREDENTIAL_ID`: Set up WordPress credentials in n8n
+2. `YOUR_SHARED_SECRET_HERE`: Configure a shared secret for form submissions
+3. `YOUR_CONTENT_SYNC_API_KEY`: Set up an API key for content synchronization
+
+## Requirements
+
+- N8N v1.0.0 or later
+- WordPress with REST API enabled
+- JWT Authentication for WP REST API plugin
+- Advanced Custom Fields (ACF) for exposing custom fields
+- WP REST API Controller for fine-grained API endpoint control
+- WP REST Cache for API performance optimization
 
 ## Maintenance
 
@@ -59,4 +81,4 @@ Regular maintenance should include:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT
