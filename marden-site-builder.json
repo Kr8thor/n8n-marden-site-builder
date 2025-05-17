@@ -1,1 +1,891 @@
-[{"createdAt":"2025-05-17T06:54:09.642Z","updatedAt":"2025-05-17T12:43:51.000Z","id":"4CoggHF1MBJV6Txm","name":"Marden site builder","active":true,"nodes":[{"parameters":{"httpMethod":"GET","path":"webhook-content","options":{"responseMode":"responseNode"}},"id":"c7965798-5c50-48b2-9a96-cdb84c8ae53b","name":"Webhook Content","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,100]},{"parameters":{"authentication":"wordpress","siteUrl":"={{ $json.siteUrl }}","operation":"getAll","resource":"posts","options":{"embed":true,"per_page":"10"}},"id":"a1b2c3d4-e5f6-7890-1234-567890abcdef","name":"WordPress Content","type":"n8n-nodes-base.wordpress","typeVersion":2,"position":[300,100],"credentials":{"wordpressApi":{"id":"YOUR_WORDPRESS_CREDENTIAL_ID","name":"WordPress Credential"}}},{"parameters":{"jsCode":"// Format WordPress data for React frontend\nreturn {\n  posts: items.map(item => {\n    const post = item.json;\n    return {\n      id: post.id,\n      title: post.title.rendered,\n      slug: post.slug,\n      content: post.content.rendered,\n      excerpt: post.excerpt.rendered,\n      featuredImage: post._embedded && \n                    post._embedded['wp:featuredmedia']? \n                    post._embedded['wp:featuredmedia'][0].source_url : null,\n      author: post._embedded && \n              post._embedded.author? \n              post._embedded.author[0].name : null,\n      date: post.date,\n      modified: post.modified,\n      categories: post._embedded && \n                post._embedded['wp:term'] ? \n                post._embedded['wp:term'][0].map(cat => ({\n                  id: cat.id,\n                  name: cat.name,\n                  slug: cat.slug\n                })) : []\n    };\n  }),\n  totalPages: items.length > 0 ? parseInt(items[0].headers['x-wp-totalpages']) || 1 : 1,\n  total: items.length > 0 ? parseInt(items[0].headers['x-wp-total']) || 0 : 0\n};\n"},"id":"f8e7d6c5-b4a3-2109-8765-43210fedcba9","name":"Transform Content","type":"n8n-nodes-base.function","typeVersion":1,"position":[500,100]},{"parameters":{"httpMethod":"GET","path":"/webhook/content","responseCode":200,"responseBody":"={{ JSON.stringify($json) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\",\n  \"Cache-Control\": \"public, max-age=600\"\n}"},"id":"98765432-10fe-dcba-9012-34567890abcd","name":"Respond Content","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,100]},{"parameters":{"httpMethod":"GET","path":"webhook-list-posts","options":{"responseMode":"responseNode"}},"id":"1a2b3c4d-5e6f-7890-1234-567890abcdef","name":"Webhook List Posts","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,250]},{"parameters":{"authentication":"wordpress","siteUrl":"={{ $json.siteUrl }}","operation":"getAll","resource":"posts","queryParameters":{"page":"={{ $request.query.page || \"1\" }}","per_page":"={{ $request.query.per_page || \"10\" }}","categories":"={{ $request.query.category }}","search":"={{ $request.query.search }}"},"options":{"embed":true}},"id":"f1e2d3c4-b5a6-9870-1234-567890abcdef","name":"WordPress List Posts","type":"n8n-nodes-base.wordpress","typeVersion":2,"position":[300,250],"credentials":{"wordpressApi":{"id":"YOUR_WORDPRESS_CREDENTIAL_ID","name":"WordPress Credential"}}},{"parameters":{"jsCode":"// Get pagination headers from the response\nconst headers = items[0]?.headers || {};\n\n// Create formatted post data for React frontend\nreturn {\n  posts: items.map(item => {\n    const post = item.json;\n    return {\n      id: post.id,\n      title: post.title.rendered,\n      slug: post.slug,\n      excerpt: post.excerpt.rendered,\n      featuredImage: post._embedded && \n                    post._embedded['wp:featuredmedia']? \n                    post._embedded['wp:featuredmedia'][0].source_url : null,\n      date: post.date,\n      modified: post.modified,\n      categories: post._embedded && \n                post._embedded['wp:term'] ? \n                post._embedded['wp:term'][0].map(cat => ({\n                  id: cat.id,\n                  name: cat.name,\n                  slug: cat.slug\n                })) : []\n    };\n  }),\n  totalPages: parseInt(headers['x-wp-totalpages'] || '1'),\n  total: parseInt(headers['x-wp-total'] || '0'),\n  currentPage: parseInt($request.query.page || '1')\n};\n"},"id":"87654321-fedc-ba98-7654-3210fedcba98","name":"Transform List Posts","type":"n8n-nodes-base.function","typeVersion":1,"position":[500,250]},{"parameters":{"httpMethod":"GET","path":"/webhook/list-posts","responseCode":200,"responseBody":"={{ JSON.stringify($json) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\",\n  \"Cache-Control\": \"public, max-age=600\"\n}"},"id":"2b3c4d5e-6f78-9012-3456-7890abcdef01","name":"Respond List Posts","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,250]},{"parameters":{"httpMethod":"GET","path":"webhook-get-menus","options":{"responseMode":"responseNode"}},"id":"c8d9e0f1-a2b3-4c5d-6e7f-8091a2b3c4d5","name":"Webhook Get Menus","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,400]},{"parameters":{"requestMethod":"GET","url":"={{ $json.siteUrl }}/wp-json/wp-api-menus/v2/menus","options":{"fullResponse":true,"responseFormat":"json"}},"id":"e9f0a1b2-c3d4-5e6f-7890-1234567890ab","name":"HTTP Request Get Menus","type":"n8n-nodes-base.httpRequest","typeVersion":3,"position":[300,400]},{"parameters":{"jsCode":"// Format menu data for React\nreturn items.map(item => {\n  return {\n    id: item.json.ID,\n    name: item.json.name,\n    slug: item.json.slug,\n    items: item.json.items?.map(menuItem => ({\n      id: menuItem.ID,\n      title: menuItem.title,\n      url: menuItem.url,\n      parent: menuItem.menu_item_parent,\n      order: menuItem.menu_order,\n      target: menuItem.target || '_self',\n      classes: menuItem.classes || [],\n      submenu: []\n    })) || []\n  };\n}).map(menu => {\n  // Organize menu items into hierarchical structure\n  const itemMap = {};\n  menu.items.forEach(item => { itemMap[item.id] = item; });\n  \n  const hierarchicalItems = [];\n  menu.items.forEach(item => {\n    if (!item.parent || item.parent === '0') {\n      hierarchicalItems.push(item);\n    } else if (itemMap[item.parent]) {\n      if (!itemMap[item.parent].submenu) {\n        itemMap[item.parent].submenu = [];\n      }\n      itemMap[item.parent].submenu.push(item);\n    }\n  });\n  \n  // Sort by menu order\n  hierarchicalItems.sort((a, b) => a.order - b.order);\n  hierarchicalItems.forEach(item => {\n    if (item.submenu && item.submenu.length > 0) {\n      item.submenu.sort((a, b) => a.order - b.order);\n    }\n  });\n  \n  return {\n    ...menu,\n    items: hierarchicalItems\n  };\n});"},"id":"f0a1b2c3-d4e5-6f78-9012-34567890abcd","name":"Transform Get Menus","type":"n8n-nodes-base.function","typeVersion":1,"position":[500,400]},{"parameters":{"httpMethod":"GET","path":"/webhook/get-menus","responseCode":200,"responseBody":"={{ JSON.stringify($json) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\",\n  \"Cache-Control\": \"public, max-age=3600\"\n}"},"id":"a2b3c4d5-e6f7-8901-2345-67890abcdef0","name":"Respond Get Menus","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,400]},{"parameters":{"httpMethod":"POST","path":"webhook-auth","options":{"responseMode":"responseNode"}},"id":"b3c4d5e6-f7a8-9012-3456-7890abcdef01","name":"Webhook Auth","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,550]},{"parameters":{"requestMethod":"POST","url":"={{ $json.siteUrl }}/wp-json/jwt-auth/v1/token","bodyParametersJson":"={\n  \"username\": \"={{$json.body.username}}\",\n  \"password\": \"={{$json.body.password}}\"\n}","options":{"fullResponse":true,"responseFormat":"json"}},"id":"c4d5e6f7-a8b9-0123-4567-890abcdef012","name":"HTTP Request Auth","type":"n8n-nodes-base.httpRequest","typeVersion":3,"position":[300,550]},{"parameters":{"conditions":{"string":[{"value1":"={{$json.body.token}}","operation":"isNotEmpty"}]}},"id":"d5e6f7a8-b9c0-1234-5678-90abcdef0123","name":"If Auth Success","type":"n8n-nodes-base.if","typeVersion":1,"position":[500,550]},{"parameters":{"httpMethod":"POST","path":"/webhook/auth","responseCode":200,"responseBody":"={{ JSON.stringify({\n  token: $json.body.token,\n  user: $json.body.user_display_name,\n  userId: $json.body.user_id,\n  userEmail: $json.body.user_email,\n  expire: Date.now() + (24 * 60 * 60 * 1000) // 24 hours in milliseconds\n}) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"e6f7a8b9-c0d1-2345-6789-0abcdef01234","name":"Respond Auth Success","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,500]},{"parameters":{"httpMethod":"POST","path":"/webhook/auth","responseCode":401,"responseBody":"={\n  \"message\": \"Authentication failed\",\n  \"code\": \"{{$json.body.code || 'invalid_credentials'}}\"\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"f7a8b9c0-d1e2-3456-7890-abcdef012345","name":"Respond Auth Fail","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,600]},{"parameters":{"httpMethod":"POST","path":"webhook-validate-token","options":{"responseMode":"responseNode"}},"id":"a9b0c1d2-e3f4-5678-9012-34567890abcde","name":"Webhook Validate Token","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,700]},{"parameters":{"requestMethod":"POST","url":"={{ $json.siteUrl }}/wp-json/jwt-auth/v1/token/validate","headerParametersJson":"={\n  \"Authorization\": \"Bearer {{$json.body.token}}\"\n}","options":{"fullResponse":true,"responseFormat":"json"}},"id":"b0c1d2e3-f4a5-6789-0123-4567890abcdef","name":"HTTP Request Validate Token","type":"n8n-nodes-base.httpRequest","typeVersion":3,"position":[300,700]},{"parameters":{"conditions":{"string":[{"value1":"={{$json.body.code}}","operation":"isNotEqual","value2":"jwt_auth_valid_token"}]}},"id":"c1d2e3f4-a5b6-7890-1234-567890abcdef0","name":"If Token Invalid","type":"n8n-nodes-base.if","typeVersion":1,"position":[500,700]},{"parameters":{"httpMethod":"POST","path":"/webhook/auth/validate","responseCode":401,"responseBody":"={\n  \"valid\": false,\n  \"code\": \"{{$json.body.code || 'invalid_token'}}\",\n  \"message\": \"{{$json.body.message || 'Invalid authentication token'}}\"\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"d2e3f4a5-b6c7-8901-2345-67890abcde01","name":"Respond Token Invalid","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,650]},{"parameters":{"httpMethod":"POST","path":"/webhook/auth/validate","responseCode":200,"responseBody":"={\n  \"valid\": true,\n  \"user\": \"={{$json.body.data}}\"\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"e3f4a5b6-c7d8-9012-3456-7890abcdef012","name":"Respond Token Valid","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,750]},{"parameters":{"httpMethod":"POST","path":"webhook-form-submit","options":{"responseMode":"responseNode"}},"id":"f5a6b7c8-d9e0-1234-5678-90abcdef0123","name":"Webhook Form Submit","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,850]},{"parameters":{"jsCode":"// Rate limiting implementation\nconst { name, email, message } = $input.body;\nconst secretHeader = $node.headers['x-api-secret'];\nconst ip = $json.ip || '0.0.0.0';\nconst cacheKeyPrefix = 'form_submit_rate_';\n\n// Check API secret first\nif (secretHeader !== 'YOUR_SHARED_SECRET_HERE') {\n  return { valid: false, error: 'Unauthorized access', status: 403 };\n}\n\n// Validate required fields\nif (!name || !email || !message) {\n  return { valid: false, error: 'Missing required fields', status: 400 };\n}\n\n// Validate email format\nif (!email.match(/^\\w[-\\.\\+]*@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { valid: false, error: 'Invalid email format', status: 400 };\n}\n\n// Basic sanitization\nconst sanitizedData = {\n  name: name.replace(/[<>]/g, ''),\n  email: email.trim(),\n  message: message.replace(/[<>]/g, ''),\n  submission_date: new Date().toISOString(),\n  ip_address: ip\n};\n\nreturn { valid: true, data: sanitizedData };"},"id":"a6b7c8d9-e0f1-2345-6789-0abcdef01234","name":"Validate Form Data","type":"n8n-nodes-base.function","typeVersion":1,"position":[300,850]},{"parameters":{"conditions":{"boolean":[{"value1":"={{$json.valid}}","operation":"equal","value2":true}]}},"id":"b7c8d9e0-f1a2-3456-7890-abcdef012345","name":"If Form Valid","type":"n8n-nodes-base.if","typeVersion":1,"position":[500,850]},{"parameters":{"authentication":"wordpress","siteUrl":"={{ $json.siteUrl }}","requestMethod":"POST","path":"/wp-json/myapp/v1/form-submission","headerParametersJson":"={\n  \"X-API-SECRET\": \"YOUR_SHARED_SECRET_HERE\"\n}","bodyParametersJson":"={{ JSON.stringify($json.data) }}","options":{"fullResponse":true,"responseFormat":"json"}},"id":"c8d9e0f1-a2b3-4567-890a-bcdef0123456","name":"HTTP Request Submit Form","type":"n8n-nodes-base.wordpress","typeVersion":2,"position":[700,800],"credentials":{"wordpressApi":{"id":"YOUR_WORDPRESS_CREDENTIAL_ID","name":"WordPress Credential"}}},{"parameters":{"jsCode":"// Process the WordPress form submission response\nconst response = $node['HTTP Request Submit Form'].json;\n\n// Check if the submission was successful\nif (response && response.success) {\n  return {\n    success: true,\n    message: 'Form submitted successfully',\n    reference: response.reference || null\n  };\n} else {\n  // Handle potential WordPress errors\n  return {\n    success: false,\n    message: response.message || 'Form submission failed',\n    errors: response.errors || []\n  };\n}"},"id":"d8e0f1a2-b3c4-5678-90ab-bcdef0123456","name":"Process Form Response","type":"n8n-nodes-base.function","typeVersion":1,"position":[900,800]},{"parameters":{"httpMethod":"POST","path":"/webhook/forms/submit","responseCode":200,"responseBody":"={{ JSON.stringify($json) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"d9e0f1a2-b3c4-5678-90ab-cdef01234567","name":"Respond Form Success","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[1100,800]},{"parameters":{"httpMethod":"POST","path":"/webhook/forms/submit","responseCode":"={{$json.status || 400}}","responseBody":"={\n  \"error\": \"={{$json.error || 'Form submission failed'}}\"\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"e0f1a2b3-c4d5-6789-0abc-def012345678","name":"Respond Form Error","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,900]},{"parameters":{"httpMethod":"POST","path":"webhook-sync-content","options":{"responseMode":"responseNode"}},"id":"f1a2b3c4-d5e6-7890-abcdef-0123456789ab","name":"Webhook Sync Content","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,1000]},{"parameters":{"jsCode":"// Validate authorization for content sync\nconst authHeader = $node.headers.authorization;\nconst apiKey = $node.headers['x-api-key'];\nconst expectedApiKey = 'YOUR_CONTENT_SYNC_API_KEY';\n\n// Check if the request has valid authorization\nif (!authHeader && (!apiKey || apiKey !== expectedApiKey)) {\n  return {\n    valid: false,\n    error: 'Unauthorized',\n    status: 403\n  };\n}\n\n// Prepare sync data\nreturn {\n  valid: true,\n  siteUrl: $json.siteUrl,\n  body: {\n    post_id: $json.body.post_id,\n    action: $json.body.action || 'update',\n    content_type: $json.body.content_type || 'post'\n  }\n};"},"id":"a1b2c3d4-e5f6-78h0-abcde-f0123456789a","name":"Validate Sync Request","type":"n8n-nodes-base.function","typeVersion":1,"position":[300,1000]},{"parameters":{"conditions":{"boolean":[{"value1":"={{$json.valid}}","operation":"equal","value2":true}]}},"id":"b2c3d4e5-f6g7-i9h0-abcd-ef0123456789","name":"If Sync Request Valid","type":"n8n-nodes-base.if","typeVersion":1,"position":[500,950]},{"parameters":{"authentication":"wordpress","siteUrl":"={{ $json.siteUrl }}","operation":"get","resource":"posts","postId":"={{ $json.body.post_id }}","options":{"embed":true}},"id":"a2b3c4d5-e6f7-890a-bcde-f0123456789a","name":"WordPress Get Updated Content","type":"n8n-nodes-base.wordpress","typeVersion":2,"position":[700,920],"credentials":{"wordpressApi":{"id":"YOUR_WORDPRESS_CREDENTIAL_ID","name":"WordPress Credential"}}},{"parameters":{"jsCode":"// Process content updates\n// Prepare data for frontend cache invalidation\nconst contentData = items.map(item => {\n  const content = item.json;\n  return {\n    id: content.id,\n    title: content.title?.rendered,\n    slug: content.slug,\n    type: content.type,\n    modified: content.modified,\n    status: content.status\n  };\n});\n\nreturn {\n  success: true,\n  contentType: $json.body.content_type,\n  action: $json.body.action,\n  content: contentData,\n  frontendUrl: $json.frontendUrl || 'https://example.com'\n};"},"id":"b3c4d5e6-f7a8-90ab-cdef-0123456789ab","name":"Process Content Updates","type":"n8n-nodes-base.function","typeVersion":1,"position":[900,920]},{"parameters":{"requestMethod":"POST","url":"={{ $json.frontendUrl }}/api/cache-invalidate","headerParametersJson":"={\n  \"X-API-KEY\": \"YOUR_CACHE_INVALIDATION_API_KEY\"\n}","bodyParametersJson":"={{ JSON.stringify({\n  content_id: $json.content[0]?.id,\n  content_type: $json.contentType,\n  action: $json.action,\n  timestamp: Date.now()\n}) }}","options":{"fullResponse":true,"responseFormat":"json"}},"id":"c4d5e6f7-a8b9-0abc-def0-123456789abc","name":"HTTP Request Invalidate Cache","type":"n8n-nodes-base.httpRequest","typeVersion":3,"position":[1100,920]},{"parameters":{"httpMethod":"POST","path":"/webhook/sync-content","responseCode":200,"responseBody":"={\n  \"success\": true,\n  \"message\": \"Content sync initiated\",\n  \"content\": {\n    \"id\": \"{{$json.content[0]?.id}}\",\n    \"type\": \"{{$json.contentType}}\",\n    \"action\": \"{{$json.action}}\"\n  }\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"d5e6f7a8-b9c0-abcd-ef01-23456789abcd","name":"Respond Sync Success","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[1300,920]},{"parameters":{"httpMethod":"POST","path":"/webhook/sync-content","responseCode":"={{$json.status || 400}}","responseBody":"={\n  \"success\": false,\n  \"message\": \"{{$json.error || 'Content sync failed'}}\"\n}","responseHeaders":"={\n  \"Content-Type\": \"application/json\"\n}"},"id":"e6f7g8h9-i0j1-2345-6789-0abcdefghi12","name":"Respond Sync Error","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,980]},{"parameters":{"httpMethod":"GET","path":"webhook-get-single-post","options":{"responseMode":"responseNode"}},"id":"f7g8h9i0-j1k2-3456-789a-bcdefghijk34","name":"Webhook Get Single Post","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[100,1100]},{"parameters":{"authentication":"wordpress","siteUrl":"={{ $json.siteUrl }}","operation":"get","resource":"posts","postId":"={{ $request.query.id }}","options":{"embed":true}},"id":"g8h9i0j1-k2l3-4567-89ab-cdefghijkl56","name":"WordPress Get Single Post","type":"n8n-nodes-base.wordpress","typeVersion":2,"position":[300,1100],"credentials":{"wordpressApi":{"id":"YOUR_WORDPRESS_CREDENTIAL_ID","name":"WordPress Credential"}}},{"parameters":{"jsCode":"// Format single post data for React frontend\nconst post = items[0].json;\n\nif (!post || !post.id) {\n  return {\n    success: false,\n    message: 'Post not found'\n  };\n}\n\nreturn {\n  success: true,\n  post: {\n    id: post.id,\n    title: post.title.rendered,\n    slug: post.slug,\n    content: post.content.rendered,\n    excerpt: post.excerpt.rendered,\n    featuredImage: post._embedded && \n                  post._embedded['wp:featuredmedia']? \n                  post._embedded['wp:featuredmedia'][0].source_url : null,\n    author: post._embedded && \n            post._embedded.author? \n            post._embedded.author[0].name : null,\n    authorAvatar: post._embedded && \n                post._embedded.author? \n                post._embedded.author[0].avatar_urls['96'] : null,\n    date: post.date,\n    modified: post.modified,\n    categories: post._embedded && \n              post._embedded['wp:term'] ? \n              post._embedded['wp:term'][0].map(cat => ({\n                id: cat.id,\n                name: cat.name,\n                slug: cat.slug\n              })) : [],\n    tags: post._embedded && \n          post._embedded['wp:term'] && \n          post._embedded['wp:term'][1] ? \n          post._embedded['wp:term'][1].map(tag => ({\n            id: tag.id,\n            name: tag.name,\n            slug: tag.slug\n          })) : []\n  }\n};"},"id":"h9i0j1k2-l3m4-567a-bcde-fghijklmno78","name":"Format Single Post","type":"n8n-nodes-base.function","typeVersion":1,"position":[500,1100]},{"parameters":{"httpMethod":"GET","path":"/webhook/post","responseCode":"={{$json.success ? 200 : 404}}","responseBody":"={{ JSON.stringify($json) }}","responseHeaders":"={\n  \"Content-Type\": \"application/json\",\n  \"Cache-Control\": \"public, max-age=300\"\n}"},"id":"i0j1k2l3-m4n5-678b-cdef-ghijklmnop90","name":"Respond Single Post","type":"n8n-nodes-base.webhook","typeVersion":3,"position":[700,1100]}],"connections":{"c7965798-5c50-48b2-9a96-cdb84c8ae53b":{"main":[[{"node":"a1b2c3d4-e5f6-7890-1234-567890abcdef","type":"main","index":0}]]},"a1b2c3d4-e5f6-7890-1234-567890abcdef":{"main":[[{"node":"f8e7d6c5-b4a3-2109-8765-43210fedcba9","type":"main","index":0}]]},"f8e7d6c5-b4a3-2109-8765-43210fedcba9":{"main":[[{"node":"98765432-10fe-dcba-9012-34567890abcd","type":"main","index":0}]]},"1a2b3c4d-5e6f-7890-1234-567890abcdef":{"main":[[{"node":"f1e2d3c4-b5a6-9870-1234-567890abcdef","type":"main","index":0}]]},"f1e2d3c4-b5a6-9870-1234-567890abcdef":{"main":[[{"node":"87654321-fedc-ba98-7654-3210fedcba98","type":"main","index":0}]]},"87654321-fedc-ba98-7654-3210fedcba98":{"main":[[{"node":"2b3c4d5e-6f78-9012-3456-7890abcdef01","type":"main","index":0}]]},"c8d9e0f1-a2b3-4c5d-6e7f-8091a2b3c4d5":{"main":[[{"node":"e9f0a1b2-c3d4-5e6f-7890-1234567890ab","type":"main","index":0}]]},"e9f0a1b2-c3d4-5e6f-7890-1234567890ab":{"main":[[{"node":"f0a1b2c3-d4e5-6f78-9012-34567890abcd","type":"main","index":0}]]},"f0a1b2c3-d4e5-6f78-9012-34567890abcd":{"main":[[{"node":"a2b3c4d5-e6f7-8901-2345-67890abcdef0","type":"main","index":0}]]},"b3c4d5e6-f7a8-9012-3456-7890abcdef01":{"main":[[{"node":"c4d5e6f7-a8b9-0123-4567-890abcdef012","type":"main","index":0}]]},"c4d5e6f7-a8b9-0123-4567-890abcdef012":{"main":[[{"node":"d5e6f7a8-b9c0-1234-5678-90abcdef0123","type":"main","index":0}]]},"d5e6f7a8-b9c0-1234-5678-90abcdef0123":{"main":[[{"node":"e6f7a8b9-c0d1-2345-6789-0abcdef01234","type":"main","index":0}],[{"node":"f7a8b9c0-d1e2-3456-7890-abcdef012345","type":"main","index":0}]]},"a9b0c1d2-e3f4-5678-9012-34567890abcde":{"main":[[{"node":"b0c1d2e3-f4a5-6789-0123-4567890abcdef","type":"main","index":0}]]},"b0c1d2e3-f4a5-6789-0123-4567890abcdef":{"main":[[{"node":"c1d2e3f4-a5b6-7890-1234-567890abcdef0","type":"main","index":0}]]},"c1d2e3f4-a5b6-7890-1234-567890abcdef0":{"main":[[{"node":"d2e3f4a5-b6c7-8901-2345-67890abcde01","type":"main","index":0}],[{"node":"e3f4a5b6-c7d8-9012-3456-7890abcdef012","type":"main","index":0}]]},"f5a6b7c8-d9e0-1234-5678-90abcdef0123":{"main":[[{"node":"a6b7c8d9-e0f1-2345-6789-0abcdef01234","type":"main","index":0}]]},"a6b7c8d9-e0f1-2345-6789-0abcdef01234":{"main":[[{"node":"b7c8d9e0-f1a2-3456-7890-abcdef012345","type":"main","index":0}]]},"b7c8d9e0-f1a2-3456-7890-abcdef012345":{"main":[[{"node":"c8d9e0f1-a2b3-4567-890a-bcdef0123456","type":"main","index":0}],[{"node":"e0f1a2b3-c4d5-6789-0abc-def012345678","type":"main","index":0}]]},"c8d9e0f1-a2b3-4567-890a-bcdef0123456":{"main":[[{"node":"d8e0f1a2-b3c4-5678-90ab-bcdef0123456","type":"main","index":0}]]},"d8e0f1a2-b3c4-5678-90ab-bcdef0123456":{"main":[[{"node":"d9e0f1a2-b3c4-5678-90ab-cdef01234567","type":"main","index":0}]]},"f1a2b3c4-d5e6-7890-abcdef-0123456789ab":{"main":[[{"node":"a1b2c3d4-e5f6-78h0-abcde-f0123456789a","type":"main","index":0}]]},"a1b2c3d4-e5f6-78h0-abcde-f0123456789a":{"main":[[{"node":"b2c3d4e5-f6g7-i9h0-abcd-ef0123456789","type":"main","index":0}]]},"b2c3d4e5-f6g7-i9h0-abcd-ef0123456789":{"main":[[{"node":"a2b3c4d5-e6f7-890a-bcde-f0123456789a","type":"main","index":0}],[{"node":"e6f7g8h9-i0j1-2345-6789-0abcdefghi12","type":"main","index":0}]]},"a2b3c4d5-e6f7-890a-bcde-f0123456789a":{"main":[[{"node":"b3c4d5e6-f7a8-90ab-cdef-0123456789ab","type":"main","index":0}]]},"b3c4d5e6-f7a8-90ab-cdef-0123456789ab":{"main":[[{"node":"c4d5e6f7-a8b9-0abc-def0-123456789abc","type":"main","index":0}]]},"c4d5e6f7-a8b9-0abc-def0-123456789abc":{"main":[[{"node":"d5e6f7a8-b9c0-abcd-ef01-23456789abcd","type":"main","index":0}]]},"f7g8h9i0-j1k2-3456-789a-bcdefghijk34":{"main":[[{"node":"g8h9i0j1-k2l3-4567-89ab-cdefghijkl56","type":"main","index":0}]]},"g8h9i0j1-k2l3-4567-89ab-cdefghijkl56":{"main":[[{"node":"h9i0j1k2-l3m4-567a-bcde-fghijklmno78","type":"main","index":0}]]},"h9i0j1k2-l3m4-567a-bcde-fghijklmno78":{"main":[[{"node":"i0j1k2l3-m4n5-678b-cdef-ghijklmnop90","type":"main","index":0}]]}},"settings":{"executionOrder":"v1"},"staticData":null,"meta":null,"pinData":{},"versionId":"a4a3aed4-14fb-4405-a040-7f206a688e86","triggerCount":17,"tags":[]}]
+[
+  {
+    "id": "4CoggHF1MBJV6Txm",
+    "name": "Marden site builder",
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "webhook-content",
+          "options": {}
+        },
+        "id": "c7965798-5c50-48b2-9a96-cdb84c8ae53b",
+        "name": "Webhook Content",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 100]
+      },
+      {
+        "parameters": {
+          "authentication": "basicAuth",
+          "url": "={{$json.siteUrl}}/wp-json/wp/v2/posts",
+          "options": {
+            "queryParameters": {
+              "_embed": "true",
+              "per_page": "10"
+            }
+          }
+        },
+        "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "name": "WordPress Content",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 100],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "1",
+            "name": "WordPress Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Format WordPress data for React frontend\nreturn {\n  posts: items.map(item => {\n    const post = item.json;\n    return {\n      id: post.id,\n      title: post.title.rendered,\n      slug: post.slug,\n      content: post.content.rendered,\n      excerpt: post.excerpt.rendered,\n      featuredImage: post._embedded && \n                  post._embedded['wp:featuredmedia'] && \n                  post._embedded['wp:featuredmedia'][0] ? \n                  post._embedded['wp:featuredmedia'][0].source_url : null,\n      author: post._embedded && \n              post._embedded.author && \n              post._embedded.author[0] ? \n              post._embedded.author[0].name : null,\n      date: post.date,\n      modified: post.modified,\n      categories: post._embedded && \n                post._embedded['wp:term'] ? \n                post._embedded['wp:term'][0].map(cat => ({\n                  id: cat.id,\n                  name: cat.name,\n                  slug: cat.slug\n                })) : []\n    };\n  }),\n  totalPages: items.length > 0 && items[0].headers ? parseInt(items[0].headers['x-wp-totalpages']) || 1 : 1,\n  total: items.length > 0 && items[0].headers ? parseInt(items[0].headers['x-wp-total']) || 0 : 0\n};"
+        },
+        "id": "f8e7d6c5-b4a3-2109-8765-43210fedcba9",
+        "name": "Transform Content",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [500, 100]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{$json}}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "Cache-Control",
+                  "value": "public, max-age=600"
+                }
+              ]
+            }
+          }
+        },
+        "id": "98765432-10fe-dcba-9012-34567890abcd",
+        "name": "Respond Content",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 100]
+      },
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "webhook-list-posts",
+          "options": {}
+        },
+        "id": "1a2b3c4d-5e6f-7890-1234-567890abcdef",
+        "name": "Webhook List Posts",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 250]
+      },
+      {
+        "parameters": {
+          "authentication": "basicAuth",
+          "url": "={{$json.siteUrl}}/wp-json/wp/v2/posts",
+          "options": {
+            "queryParameters": {
+              "_embed": "true",
+              "page": "={{$node[\"Webhook List Posts\"].json.query.page || \"1\"}}",
+              "per_page": "={{$node[\"Webhook List Posts\"].json.query.per_page || \"10\"}}",
+              "categories": "={{$node[\"Webhook List Posts\"].json.query.category}}",
+              "search": "={{$node[\"Webhook List Posts\"].json.query.search}}"
+            }
+          }
+        },
+        "id": "f1e2d3c4-b5a6-9870-1234-567890abcdef",
+        "name": "WordPress List Posts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 250],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "1",
+            "name": "WordPress Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get pagination headers from the response\nconst headers = items[0]?.headers || {};\n\n// Create formatted post data for React frontend\nreturn {\n  posts: items.map(item => {\n    const post = item.json;\n    return {\n      id: post.id,\n      title: post.title.rendered,\n      slug: post.slug,\n      excerpt: post.excerpt.rendered,\n      featuredImage: post._embedded && \n                  post._embedded['wp:featuredmedia'] && \n                  post._embedded['wp:featuredmedia'][0] ? \n                  post._embedded['wp:featuredmedia'][0].source_url : null,\n      date: post.date,\n      modified: post.modified,\n      categories: post._embedded && \n                post._embedded['wp:term'] ? \n                post._embedded['wp:term'][0].map(cat => ({\n                  id: cat.id,\n                  name: cat.name,\n                  slug: cat.slug\n                })) : []\n    };\n  }),\n  totalPages: parseInt(headers['x-wp-totalpages'] || '1'),\n  total: parseInt(headers['x-wp-total'] || '0'),\n  currentPage: parseInt($node[\"Webhook List Posts\"].json.query.page || '1')\n};"
+        },
+        "id": "87654321-fedc-ba98-7654-3210fedcba98",
+        "name": "Transform List Posts",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [500, 250]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{$json}}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "Cache-Control",
+                  "value": "public, max-age=600"
+                }
+              ]
+            }
+          }
+        },
+        "id": "2b3c4d5e-6f78-9012-3456-7890abcdef01",
+        "name": "Respond List Posts",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 250]
+      },
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "webhook-get-menus",
+          "options": {}
+        },
+        "id": "c8d9e0f1-a2b3-4c5d-6e7f-8091a2b3c4d5",
+        "name": "Webhook Get Menus",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 400]
+      },
+      {
+        "parameters": {
+          "url": "={{$json.siteUrl}}/wp-json/wp-api-menus/v2/menus",
+          "options": {
+            "fullResponse": true
+          }
+        },
+        "id": "e9f0a1b2-c3d4-5e6f-7890-1234567890ab",
+        "name": "HTTP Request Get Menus",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 400]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Format menu data for React\nreturn items.map(item => {\n  return {\n    id: item.json.ID,\n    name: item.json.name,\n    slug: item.json.slug,\n    items: item.json.items?.map(menuItem => ({\n      id: menuItem.ID,\n      title: menuItem.title,\n      url: menuItem.url,\n      parent: menuItem.menu_item_parent,\n      order: menuItem.menu_order,\n      target: menuItem.target || '_self',\n      classes: menuItem.classes || [],\n      submenu: []\n    })) || []\n  };\n}).map(menu => {\n  // Organize menu items into hierarchical structure\n  const itemMap = {};\n  menu.items.forEach(item => { itemMap[item.id] = item; });\n  \n  const hierarchicalItems = [];\n  menu.items.forEach(item => {\n    if (!item.parent || item.parent === '0') {\n      hierarchicalItems.push(item);\n    } else if (itemMap[item.parent]) {\n      if (!itemMap[item.parent].submenu) {\n        itemMap[item.parent].submenu = [];\n      }\n      itemMap[item.parent].submenu.push(item);\n    }\n  });\n  \n  // Sort by menu order\n  hierarchicalItems.sort((a, b) => a.order - b.order);\n  hierarchicalItems.forEach(item => {\n    if (item.submenu && item.submenu.length > 0) {\n      item.submenu.sort((a, b) => a.order - b.order);\n    }\n  });\n  \n  return {\n    ...menu,\n    items: hierarchicalItems\n  };\n});"
+        },
+        "id": "f0a1b2c3-d4e5-6f78-9012-34567890abcd",
+        "name": "Transform Get Menus",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [500, 400]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{$json}}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "Cache-Control",
+                  "value": "public, max-age=3600"
+                }
+              ]
+            }
+          }
+        },
+        "id": "a2b3c4d5-e6f7-8901-2345-67890abcdef0",
+        "name": "Respond Get Menus",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 400]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "webhook-auth",
+          "options": {}
+        },
+        "id": "b3c4d5e6-f7a8-9012-3456-7890abcdef01",
+        "name": "Webhook Auth",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 550]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{$json.siteUrl}}/wp-json/jwt-auth/v1/token",
+          "bodyParametersUi": {
+            "parameter": [
+              {
+                "name": "username",
+                "value": "={{$json.body.username}}"
+              },
+              {
+                "name": "password",
+                "value": "={{$json.body.password}}"
+              }
+            ]
+          },
+          "options": {
+            "fullResponse": true
+          }
+        },
+        "id": "c4d5e6f7-a8b9-0123-4567-890abcdef012",
+        "name": "HTTP Request Auth",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 550]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{$json.body.token}}",
+                "operation": "isNotEmpty"
+              }
+            ]
+          }
+        },
+        "id": "d5e6f7a8-b9c0-1234-5678-90abcdef0123",
+        "name": "If Auth Success",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [500, 550]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({\n  token: $json.body.token,\n  user: $json.body.user_display_name,\n  userId: $json.body.user_id,\n  userEmail: $json.body.user_email,\n  expire: Date.now() + (24 * 60 * 60 * 1000) // 24 hours in milliseconds\n}) }}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "e6f7a8b9-c0d1-2345-6789-0abcdef01234",
+        "name": "Respond Auth Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 500]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"message\": \"Authentication failed\",\n  \"code\": \"{{$json.body.code || 'invalid_credentials'}}\"\n}",
+          "options": {
+            "responseCode": 401,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "f7a8b9c0-d1e2-3456-7890-abcdef012345",
+        "name": "Respond Auth Fail",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 600]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "webhook-validate-token",
+          "options": {}
+        },
+        "id": "a9b0c1d2-e3f4-5678-9012-34567890abcde",
+        "name": "Webhook Validate Token",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 700]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{$json.siteUrl}}/wp-json/jwt-auth/v1/token/validate",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{$json.body.token}}"
+              }
+            ]
+          },
+          "options": {
+            "fullResponse": true
+          }
+        },
+        "id": "b0c1d2e3-f4a5-6789-0123-4567890abcdef",
+        "name": "HTTP Request Validate Token",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 700]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{$json.body.code}}",
+                "operation": "notEqual",
+                "value2": "jwt_auth_valid_token"
+              }
+            ]
+          }
+        },
+        "id": "c1d2e3f4-a5b6-7890-1234-567890abcdef0",
+        "name": "If Token Invalid",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [500, 700]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"valid\": false,\n  \"code\": \"{{$json.body.code || 'invalid_token'}}\",\n  \"message\": \"{{$json.body.message || 'Invalid authentication token'}}\"\n}",
+          "options": {
+            "responseCode": 401,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "d2e3f4a5-b6c7-8901-2345-67890abcde01",
+        "name": "Respond Token Invalid",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 650]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"valid\": true,\n  \"user\": \"={{$json.body.data}}\"\n}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "e3f4a5b6-c7d8-9012-3456-7890abcdef012",
+        "name": "Respond Token Valid",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 750]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "webhook-form-submit",
+          "options": {}
+        },
+        "id": "f5a6b7c8-d9e0-1234-5678-90abcdef0123",
+        "name": "Webhook Form Submit",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 850]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Form validation\nconst { name, email, message } = $input.json.body;\nconst secretHeader = $input.json.headers['x-api-secret'];\n\n// Check API secret first\nif (secretHeader !== 'YOUR_SHARED_SECRET_HERE') {\n  return { valid: false, error: 'Unauthorized access', status: 403 };\n}\n\n// Validate required fields\nif (!name || !email || !message) {\n  return { valid: false, error: 'Missing required fields', status: 400 };\n}\n\n// Validate email format\nif (!email.match(/^\\w[-\\.\\+]*@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { valid: false, error: 'Invalid email format', status: 400 };\n}\n\n// Basic sanitization\nconst sanitizedData = {\n  name: name.replace(/[<>]/g, ''),\n  email: email.trim(),\n  message: message.replace(/[<>]/g, ''),\n  submission_date: new Date().toISOString(),\n  ip_address: $input.json.headers['x-forwarded-for'] || '0.0.0.0'\n};\n\nreturn { valid: true, data: sanitizedData };"
+        },
+        "id": "a6b7c8d9-e0f1-2345-6789-0abcdef01234",
+        "name": "Validate Form Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [300, 850]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{$json.valid}}",
+                "value2": true
+              }
+            ]
+          }
+        },
+        "id": "b7c8d9e0-f1a2-3456-7890-abcdef012345",
+        "name": "If Form Valid",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [500, 850]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{$json.siteUrl}}/wp-json/myapp/v1/form-submission",
+          "authentication": "basicAuth",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-SECRET",
+                "value": "YOUR_SHARED_SECRET_HERE"
+              }
+            ]
+          },
+          "bodyParametersUi": {
+            "parameter": [
+              {
+                "name": "data",
+                "value": "={{ JSON.stringify($json.data) }}"
+              }
+            ]
+          },
+          "options": {
+            "fullResponse": true
+          }
+        },
+        "id": "c8d9e0f1-a2b3-4567-890a-bcdef0123456",
+        "name": "HTTP Request Submit Form",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [700, 800],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "1",
+            "name": "WordPress Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Process the WordPress form submission response\nconst response = $input.json;\n\n// Check if the submission was successful\nif (response && response.statusCode >= 200 && response.statusCode < 300) {\n  return {\n    success: true,\n    message: 'Form submitted successfully',\n    reference: response.body?.reference || null\n  };\n} else {\n  // Handle potential WordPress errors\n  return {\n    success: false,\n    message: response.body?.message || 'Form submission failed',\n    errors: response.body?.errors || []\n  };\n}"
+        },
+        "id": "d8e0f1a2-b3c4-5678-90ab-bcdef0123456",
+        "name": "Process Form Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [900, 800]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "d9e0f1a2-b3c4-5678-90ab-cdef01234567",
+        "name": "Respond Form Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [1100, 800]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"error\": \"={{$json.error || 'Form submission failed'}}\"\n}",
+          "options": {
+            "responseCode": "={{$json.status || 400}}",
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            }
+          }
+        },
+        "id": "e0f1a2b3-c4d5-6789-0abc-def012345678",
+        "name": "Respond Form Error",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 900]
+      },
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "webhook-get-single-post",
+          "options": {}
+        },
+        "id": "f7g8h9i0-j1k2-3456-789a-bcdefghijk34",
+        "name": "Webhook Get Single Post",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 1000]
+      },
+      {
+        "parameters": {
+          "authentication": "basicAuth",
+          "url": "={{$json.siteUrl}}/wp-json/wp/v2/posts/{{$node[\"Webhook Get Single Post\"].json.query.id}}",
+          "options": {
+            "queryParameters": {
+              "_embed": "true"
+            }
+          }
+        },
+        "id": "g8h9i0j1-k2l3-4567-89ab-cdefghijkl56",
+        "name": "WordPress Get Single Post",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 3,
+        "position": [300, 1000],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "1",
+            "name": "WordPress Credentials"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Format single post data for React frontend\nconst post = $input.json.body;\n\nif (!post || !post.id) {\n  return {\n    success: false,\n    message: 'Post not found'\n  };\n}\n\nreturn {\n  success: true,\n  post: {\n    id: post.id,\n    title: post.title.rendered,\n    slug: post.slug,\n    content: post.content.rendered,\n    excerpt: post.excerpt.rendered,\n    featuredImage: post._embedded && \n                post._embedded['wp:featuredmedia'] && \n                post._embedded['wp:featuredmedia'][0] ? \n                post._embedded['wp:featuredmedia'][0].source_url : null,\n    author: post._embedded && \n            post._embedded.author && \n            post._embedded.author[0] ? \n            post._embedded.author[0].name : null,\n    authorAvatar: post._embedded && \n                post._embedded.author && \n                post._embedded.author[0] && \n                post._embedded.author[0].avatar_urls ? \n                post._embedded.author[0].avatar_urls['96'] : null,\n    date: post.date,\n    modified: post.modified,\n    categories: post._embedded && \n                post._embedded['wp:term'] ? \n                post._embedded['wp:term'][0].map(cat => ({\n                  id: cat.id,\n                  name: cat.name,\n                  slug: cat.slug\n                })) : [],\n    tags: post._embedded && \n          post._embedded['wp:term'] && \n          post._embedded['wp:term'][1] ? \n          post._embedded['wp:term'][1].map(tag => ({\n            id: tag.id,\n            name: tag.name,\n            slug: tag.slug\n          })) : []\n  }\n};"
+        },
+        "id": "h9i0j1k2-l3m4-567a-bcde-fghijklmno78",
+        "name": "Format Single Post",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [500, 1000]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": "={{$json.success ? 200 : 404}}",
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "Cache-Control",
+                  "value": "public, max-age=300"
+                }
+              ]
+            }
+          }
+        },
+        "id": "i0j1k2l3-m4n5-678b-cdef-ghijklmnop90",
+        "name": "Respond Single Post",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [700, 1000]
+      }
+    ],
+    "connections": {
+      "c7965798-5c50-48b2-9a96-cdb84c8ae53b": {
+        "main": [
+          [
+            {
+              "node": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "a1b2c3d4-e5f6-7890-1234-567890abcdef": {
+        "main": [
+          [
+            {
+              "node": "f8e7d6c5-b4a3-2109-8765-43210fedcba9",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "f8e7d6c5-b4a3-2109-8765-43210fedcba9": {
+        "main": [
+          [
+            {
+              "node": "98765432-10fe-dcba-9012-34567890abcd",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "1a2b3c4d-5e6f-7890-1234-567890abcdef": {
+        "main": [
+          [
+            {
+              "node": "f1e2d3c4-b5a6-9870-1234-567890abcdef",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "f1e2d3c4-b5a6-9870-1234-567890abcdef": {
+        "main": [
+          [
+            {
+              "node": "87654321-fedc-ba98-7654-3210fedcba98",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "87654321-fedc-ba98-7654-3210fedcba98": {
+        "main": [
+          [
+            {
+              "node": "2b3c4d5e-6f78-9012-3456-7890abcdef01",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "c8d9e0f1-a2b3-4c5d-6e7f-8091a2b3c4d5": {
+        "main": [
+          [
+            {
+              "node": "e9f0a1b2-c3d4-5e6f-7890-1234567890ab",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "e9f0a1b2-c3d4-5e6f-7890-1234567890ab": {
+        "main": [
+          [
+            {
+              "node": "f0a1b2c3-d4e5-6f78-9012-34567890abcd",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "f0a1b2c3-d4e5-6f78-9012-34567890abcd": {
+        "main": [
+          [
+            {
+              "node": "a2b3c4d5-e6f7-8901-2345-67890abcdef0",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "b3c4d5e6-f7a8-9012-3456-7890abcdef01": {
+        "main": [
+          [
+            {
+              "node": "c4d5e6f7-a8b9-0123-4567-890abcdef012",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "c4d5e6f7-a8b9-0123-4567-890abcdef012": {
+        "main": [
+          [
+            {
+              "node": "d5e6f7a8-b9c0-1234-5678-90abcdef0123",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "d5e6f7a8-b9c0-1234-5678-90abcdef0123": {
+        "main": [
+          [
+            {
+              "node": "e6f7a8b9-c0d1-2345-6789-0abcdef01234",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "f7a8b9c0-d1e2-3456-7890-abcdef012345",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "a9b0c1d2-e3f4-5678-9012-34567890abcde": {
+        "main": [
+          [
+            {
+              "node": "b0c1d2e3-f4a5-6789-0123-4567890abcdef",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "b0c1d2e3-f4a5-6789-0123-4567890abcdef": {
+        "main": [
+          [
+            {
+              "node": "c1d2e3f4-a5b6-7890-1234-567890abcdef0",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "c1d2e3f4-a5b6-7890-1234-567890abcdef0": {
+        "main": [
+          [
+            {
+              "node": "d2e3f4a5-b6c7-8901-2345-67890abcde01",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "e3f4a5b6-c7d8-9012-3456-7890abcdef012",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "f5a6b7c8-d9e0-1234-5678-90abcdef0123": {
+        "main": [
+          [
+            {
+              "node": "a6b7c8d9-e0f1-2345-6789-0abcdef01234",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "a6b7c8d9-e0f1-2345-6789-0abcdef01234": {
+        "main": [
+          [
+            {
+              "node": "b7c8d9e0-f1a2-3456-7890-abcdef012345",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "b7c8d9e0-f1a2-3456-7890-abcdef012345": {
+        "main": [
+          [
+            {
+              "node": "c8d9e0f1-a2b3-4567-890a-bcdef0123456",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "e0f1a2b3-c4d5-6789-0abc-def012345678",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "c8d9e0f1-a2b3-4567-890a-bcdef0123456": {
+        "main": [
+          [
+            {
+              "node": "d8e0f1a2-b3c4-5678-90ab-bcdef0123456",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "d8e0f1a2-b3c4-5678-90ab-bcdef0123456": {
+        "main": [
+          [
+            {
+              "node": "d9e0f1a2-b3c4-5678-90ab-cdef01234567",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "f7g8h9i0-j1k2-3456-789a-bcdefghijk34": {
+        "main": [
+          [
+            {
+              "node": "g8h9i0j1-k2l3-4567-89ab-cdefghijkl56",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "g8h9i0j1-k2l3-4567-89ab-cdefghijkl56": {
+        "main": [
+          [
+            {
+              "node": "h9i0j1k2-l3m4-567a-bcde-fghijklmno78",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "h9i0j1k2-l3m4-567a-bcde-fghijklmno78": {
+        "main": [
+          [
+            {
+              "node": "i0j1k2l3-m4n5-678b-cdef-ghijklmnop90",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    }
+  }
+]

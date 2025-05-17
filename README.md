@@ -13,7 +13,7 @@ The Marden site builder workflow implements the middleware layer between a React
 - **Menu Retrieval**: Get WordPress navigation menus in a hierarchical format
 - **Authentication**: JWT-based authentication with token validation
 - **Form Submission**: Secure form submission with validation
-- **Content Synchronization**: Two-way content sync with cache invalidation
+- **Single Post Fetching**: Fetch single post details with metadata
 
 ## Endpoints
 
@@ -33,51 +33,35 @@ The Marden site builder workflow implements the middleware layer between a React
 
 - `POST /webhook/forms/submit` - Submit form data to WordPress
 
-### Content Synchronization
-
-- `POST /webhook/sync-content` - Sync content and invalidate frontend cache
-
 ## Implementation Details
 
-The workflow implements several key features:
+This workflow has been carefully redesigned to ensure all nodes are using supported types and connections are properly established. Key changes include:
 
-- **Authentication Flow**: JWT-based authentication with secure token handling
-- **Content Transformation**: WordPress content is transformed into optimized JSON for the React frontend
-- **Security Measures**: API key validation, form data sanitization, and rate limiting
-- **Error Handling**: Comprehensive error handling for all API endpoints
-- **Caching Strategy**: Cache-Control headers for improved performance
+1. Using standard HTTP Request nodes for WordPress API calls with Basic Auth
+2. Using Code nodes (replaces Function nodes) for data transformation
+3. Using proper respondToWebhook nodes for API responses
+4. Implementing secure form validation and submission
+5. Adding proper error handling and response formatting
 
 ## Installation
 
 1. Import the workflow JSON file into your N8N instance
-2. Configure WordPress credentials in the workflow
+2. Configure HTTP Basic Auth credentials for WordPress API access
 3. Activate the workflow
 
 ## Configuration
 
 You need to update the following credentials in the workflow:
 
-1. `YOUR_WORDPRESS_CREDENTIAL_ID`: Set up WordPress credentials in n8n
-2. `YOUR_SHARED_SECRET_HERE`: Configure a shared secret for form submissions
-3. `YOUR_CONTENT_SYNC_API_KEY`: Set up an API key for content synchronization
+1. Configure WordPress Basic Auth credentials in n8n
+2. Update `YOUR_SHARED_SECRET_HERE` for form submissions
+3. Review and customize API endpoints as needed
 
 ## Requirements
 
 - N8N v1.0.0 or later
 - WordPress with REST API enabled
 - JWT Authentication for WP REST API plugin
-- Advanced Custom Fields (ACF) for exposing custom fields
-- WP REST API Controller for fine-grained API endpoint control
-- WP REST Cache for API performance optimization
-
-## Maintenance
-
-Regular maintenance should include:
-
-- Updating WordPress credentials when they change
-- Monitoring for any authentication or API errors
-- Updating security tokens periodically
-- Adding new endpoints as needed for additional functionality
 
 ## License
 
