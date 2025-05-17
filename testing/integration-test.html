@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WordPress-React Integration Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    #results {
+      white-space: pre-wrap;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      max-height: 300px;
+      overflow: auto;
+    }
+    .form-success-message {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    .form-error-message {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>WordPress-React Integration Test</h1>
+  <p>This page tests the integration between the React frontend and WordPress backend via n8n middleware.</p>
+  
+  <div class="test-section">
+    <h2>1. Content Retrieval Test</h2>
+    <p>Fetches posts from WordPress through n8n.</p>
+    <button id="testContent">Test Content Retrieval</button>
+    <div id="contentResults"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Menu Retrieval Test</h2>
+    <p>Fetches menu structure from WordPress through n8n.</p>
+    <button id="testMenu">Test Menu Retrieval</button>
+    <div id="menuResults"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Form Submission Test</h2>
+    <p>Submit a test form to WordPress through n8n.</p>
+    <form id="testForm" data-wp-form="contact">
+      <input type="text" name="name" placeholder="Name" value="Test User" required>
+      <input type="email" name="email" placeholder="Email" value="test@example.com" required>
+      <textarea name="message" placeholder="Message" required>This is a test message from the integration tester.</textarea>
+      <button type="submit">Submit Form</button>
+    </form>
+    <div id="formResults"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Authentication Test</h2>
+    <p>Tests JWT authentication through n8n (requires valid WordPress credentials).</p>
+    <input type="text" id="authUsername" placeholder="WordPress Username">
+    <input type="password" id="authPassword" placeholder="WordPress Password">
+    <button id="testAuth">Test Authentication</button>
+    <div id="authResults"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <pre id="results">Tests not yet run...</pre>
+  </div>
+
+  <script src="wordpress-integration.js"></script>
+  <script>
+    const API_BASE_URL = 'http://localhost:5678/webhook'; // Change to your production URL when ready
+    const results = document.getElementById('results');
+    
+    // Update the results display
+    function logResult(message) {
+      results.textContent += '\n' + new Date().toLocaleTimeString() + ': ' + message;
+      results.scrollTop = results.scrollHeight;
+    }
+    
+    // Content Retrieval Test
+    document.getElementById('testContent').addEventListener('click', async () => {
+      logResult('Running content retrieval test...');
+      try {
+        const response = await fetch(`${API_BASE_URL}/myapp/v1/content`);
+        const data = await response.json();
+        
+        document.getElementById('contentResults').innerHTML = 
+          `<p>Status: ${response.status} ${response.statusText}</p>
+           <p>Posts retrieved: ${data.posts ? data.posts.length : 'None'}</p>`;
+        
+        logResult(`Content test: SUCCESS - ${response.status} ${response.statusText}`);
+      } catch (error) {
+        document.getElementById('contentResults').innerHTML = 
+          `<p>Error: ${error.message}</p>`;
+        
+        logResult(`Content test: FAILED - ${error.message}`);
+      }
+    });
+    
+    // Menu Retrieval Test
+    document.getElementById('testMenu').addEventListener('click', async () => {
+      logResult('Running menu retrieval test...');
+      try {
+        const response = await fetch(`${API_BASE_URL}/myapp/v1/menu`);
+        const data = await response.json();
+        
+        document.getElementById('menuResults').innerHTML = 
+          `<p>Status: ${response.status} ${response.statusText}</p>
+           <p>Menu items: ${data.menu ? data.menu.length : 'None'}</p>`;
+        
+        logResult(`Menu test: SUCCESS - ${response.status} ${response.statusText}`);
+      } catch (error) {
+        document.getElementById('menuResults').innerHTML = 
+          `<p>Error: ${error.message}</p>`;
+        
+        logResult(`Menu test: FAILED - ${error.message}`);
+      }
+    });
+    
+    // Form Submission Test (using the WordPress Integration script)
+    if (window.WordPressAPI) {
+      logResult('WordPress Integration script loaded successfully');
+      
+      // The script should already handle form submissions, but we'll add result logging
+      document.getElementById('testForm').addEventListener('submit', async (e) => {
+        const formResults = document.getElementById('formResults');
+        formResults.innerHTML = '<p>Submitting form...</p>';
+        
+        logResult('Running form submission test...');
+        // The actual submission is handled by the integration script
+      });
+    } else {
+      logResult('ERROR: WordPress Integration script not loaded');
+      document.getElementById('formResults').innerHTML = 
+        `<p class="form-error-message">WordPress Integration script not loaded correctly.</p>`;
+    }
+    
+    // Authentication Test
+    document.getElementById('testAuth').addEventListener('click', async () => {
+      const username = document.getElementById('authUsername').value;
+      const password = document.getElementById('authPassword').value;
+      
+      if (!username || !password) {
+        document.getElementById('authResults').innerHTML = 
+          `<p class="form-error-message">Please enter WordPress username and password.</p>`;
+        return;
+      }
+      
+      logResult('Running authentication test...');
+      try {
+        let response;
+        if (window.WordPressAPI) {
+          // Use WordPress Integration script
+          response = await window.WordPressAPI.login(username, password);
+          document.getElementById('authResults').innerHTML = 
+            `<p>Authenticated: ${response.token ? 'Yes' : 'No'}</p>`;
+        } else {
+          // Direct API call
+          response = await fetch(`${API_BASE_URL}/myapp/v1/auth`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await response.json();
+          
+          document.getElementById('authResults').innerHTML = 
+            `<p>Status: ${response.status} ${response.statusText}</p>
+             <p>Token received: ${data.token ? 'Yes' : 'No'}</p>`;
+        }
+        
+        logResult(`Authentication test: SUCCESS`);
+      } catch (error) {
+        document.getElementById('authResults').innerHTML = 
+          `<p class="form-error-message">Error: ${error.message}</p>`;
+        
+        logResult(`Authentication test: FAILED - ${error.message}`);
+      }
+    });
+    
+    // Initial log
+    logResult('Test page loaded. Ready to run integration tests.');
+  </script>
+</body>
+</html>
