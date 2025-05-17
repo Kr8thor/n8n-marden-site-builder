@@ -1,0 +1,491 @@
+[
+  {
+    "createdAt":"2025-05-17T06:54:09.642Z",
+    "updatedAt":"2025-05-17T15:22:41.000Z",
+    "id":"4CoggHF1MBJV6Txm",
+    "name":"WordPress-React Integration",
+    "active":false,
+    "nodes":[
+      {
+        "parameters":{
+          "path":"api/content",
+          "options":{
+            "responseMode":"lastNode",
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"Content API Endpoint",
+        "type":"n8n-nodes-base.webhook",
+        "typeVersion":1,
+        "position":[380,300],
+        "id":"36b6770d-845b-4e34-979f-d5dae6af4836",
+        "webhookId":"f2998f10-d049-4284-ba87-cbe321c9baec"
+      },
+      {
+        "parameters":{
+          "operation":"getAll",
+          "resource":"posts",
+          "returnAll":false,
+          "limit":10,
+          "options":{},
+          "additionalFields":{
+            "_embed":true
+          }
+        },
+        "name":"WordPress Posts",
+        "type":"n8n-nodes-base.wordpress",
+        "typeVersion":1,
+        "position":[600,300],
+        "id":"d480aacb-de08-4451-95b7-67418c6b5f09",
+        "credentials":{
+          "wordpressApi":{
+            "id":"QsrjBL5EKkFPkQ4E",
+            "name":"Wordpress account"
+          }
+        }
+      },
+      {
+        "parameters":{
+          "functionCode":"// Format WordPress data for React\nreturn items.map(item => {\n  const post = item.json;\n  return {\n    id: post.id,\n    title: post.title.rendered,\n    slug: post.slug,\n    content: post.content.rendered,\n    excerpt: post.excerpt.rendered,\n    featuredImage: post._embedded && \n                post._embedded['wp:featuredmedia'] ? \n                post._embedded['wp:featuredmedia'][0].source_url : null,\n    author: post._embedded && \n           post._embedded.author ? \n           post._embedded.author[0].name : null,\n    date: post.date,\n    categories: post._embedded && \n              post._embedded['wp:term'] ? \n              post._embedded['wp:term'][0].map(cat => ({\n                id: cat.id,\n                name: cat.name,\n                slug: cat.slug\n              })) : [],\n    tags: post._embedded && \n         post._embedded['wp:term'] && \n         post._embedded['wp:term'][1] ? \n         post._embedded['wp:term'][1].map(tag => ({\n           id: tag.id,\n           name: tag.name,\n           slug: tag.slug\n         })) : []\n  };\n});"
+        },
+        "name":"Transform for Frontend",
+        "type":"n8n-nodes-base.function",
+        "typeVersion":1,
+        "position":[820,300],
+        "id":"be9ce390-6b26-47a4-a4d5-97f4ecb7576f"
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":200,
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"HTTP Response",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1040,300],
+        "id":"29bfc3f2-c5f1-4eaa-aa88-d9957dad91ef"
+      },
+      {
+        "parameters":{
+          "httpMethod":"POST",
+          "path":"api/forms/submit",
+          "options":{
+            "responseMode":"lastNode",
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"Form Submission API",
+        "type":"n8n-nodes-base.webhook",
+        "typeVersion":1,
+        "position":[380,500],
+        "id":"7352edd7-fc98-4a10-8c04-8038b6ae0e52",
+        "webhookId":"6a6d74a1-f2b8-4ce0-ab41-6fb5e0449681"
+      },
+      {
+        "parameters":{
+          "functionCode":"// Validate form data\nconst { name, email, message } = $input.body;\nif (!name || !email || !message) {\n  return { valid: false, error: 'Missing required fields' };\n}\nif (!email.match(/^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { valid: false, error: 'Invalid email format' };\n}\n\n// Add security check for API key\nconst headers = $input.headers || {};\nconst apiSecret = headers['x-api-secret'];\nconst validSecret = 'marden-api-secret'; // In production, store this securely\n\nif (!apiSecret || apiSecret !== validSecret) {\n  return { valid: false, error: 'Unauthorized access', statusCode: 403 };\n}\n\nreturn { valid: true, data: $input.body };"
+        },
+        "name":"Validate Form",
+        "type":"n8n-nodes-base.function",
+        "typeVersion":1,
+        "position":[600,500],
+        "id":"fc1d3147-8531-4203-afeb-6086f3518af1"
+      },
+      {
+        "parameters":{
+          "conditions":{
+            "string":[
+              {
+                "value1":"={{$json[\"valid\"]}}",
+                "value2":"true"
+              }
+            ]
+          }
+        },
+        "name":"Is Form Valid?",
+        "type":"n8n-nodes-base.if",
+        "typeVersion":1,
+        "position":[820,500],
+        "id":"0397d0c6-e38c-4e1a-82b3-84aff442c94d"
+      },
+      {
+        "parameters":{
+          "url":"https://cms.mardenseo.com/wp-json/myapp/v1/form-submission",
+          "method":"POST",
+          "authentication":"headerAuth",
+          "options":{
+            "fullResponse":true,
+            "responseFormat":"json",
+            "timeout":20
+          },
+          "bodyParametersUi":{
+            "parameter":[
+              {
+                "name":"name",
+                "value":"={{$json.data.name}}"
+              },
+              {
+                "name":"email",
+                "value":"={{$json.data.email}}"
+              },
+              {
+                "name":"message",
+                "value":"={{$json.data.message}}"
+              },
+              {
+                "name":"source",
+                "value":"n8n-middleware"
+              }
+            ]
+          }
+        },
+        "name":"Send to WordPress",
+        "type":"n8n-nodes-base.httpRequest",
+        "typeVersion":1,
+        "position":[1020,440],
+        "id":"3e8e1efb-ae37-43e5-8ed9-7a04a22073e0",
+        "credentials":{
+          "headerAuth":{
+            "id":"XjwTDxJr2kGfgKzL",
+            "name":"WordPress Header Auth"
+          }
+        }
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":"={{$json.statusCode || 400}}",
+            "responseContentType":"application/json"
+          },
+          "responseBody":"={ \"success\": false, \"message\": $json.error || \"Form validation failed\" }"
+        },
+        "name":"Return Error",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1020,580],
+        "id":"31d0cf13-cc6b-498b-b599-259302ee184a"
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":200,
+            "responseContentType":"application/json"
+          },
+          "responseBody":"={ \"success\": true, \"message\": \"Form submitted successfully\" }"
+        },
+        "name":"Return Success",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1240,440],
+        "id":"469ff6b7-c92b-4af6-a44f-3d8a73149577"
+      },
+      {
+        "parameters":{
+          "httpMethod":"POST",
+          "path":"api/auth",
+          "options":{
+            "responseMode":"lastNode",
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"Authentication API",
+        "type":"n8n-nodes-base.webhook",
+        "typeVersion":1,
+        "position":[380,700],
+        "id":"a2f8cdba-4d7b-4e21-b5dd-e3fa9e673f91"
+      },
+      {
+        "parameters":{
+          "url":"https://cms.mardenseo.com/wp-json/jwt-auth/v1/token",
+          "method":"POST",
+          "options":{
+            "fullResponse":true,
+            "responseFormat":"json"
+          },
+          "bodyParametersUi":{
+            "parameter":[
+              {
+                "name":"username",
+                "value":"={{$json.body.username}}"
+              },
+              {
+                "name":"password",
+                "value":"={{$json.body.password}}"
+              }
+            ]
+          }
+        },
+        "name":"WordPress JWT Auth",
+        "type":"n8n-nodes-base.httpRequest",
+        "typeVersion":1,
+        "position":[600,700],
+        "id":"c4e763a4-d5d6-4e14-80e2-3db93b7e6f2c"
+      },
+      {
+        "parameters":{
+          "conditions":{
+            "boolean":[
+              {
+                "value1":"={{$json.body.success}}",
+                "value2":true
+              }
+            ]
+          }
+        },
+        "name":"Auth Successful?",
+        "type":"n8n-nodes-base.if",
+        "typeVersion":1,
+        "position":[820,700],
+        "id":"67a9d2e3-12e5-4f90-ae73-1c14ef456cd2"
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":200,
+            "responseContentType":"application/json"
+          },
+          "responseBody":"={{$json.body}}"
+        },
+        "name":"Auth Success Response",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1020,640],
+        "id":"fe8a723b-b673-452a-ad09-3e904ac69b1f"
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":401,
+            "responseContentType":"application/json"
+          },
+          "responseBody":"={ \"success\": false, \"message\": $json.body.message || \"Authentication failed\" }"
+        },
+        "name":"Auth Error Response",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1020,760],
+        "id":"2a58fde4-c3c0-4be1-b5eb-9d3a2f8e1fb5"
+      },
+      {
+        "parameters":{
+          "httpMethod":"GET",
+          "path":"api/menu",
+          "options":{
+            "responseMode":"lastNode",
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"Menu API Endpoint",
+        "type":"n8n-nodes-base.webhook",
+        "typeVersion":1,
+        "position":[380,900],
+        "id":"df6af2d9-c761-4acf-ae16-e68f7a8e4b5c"
+      },
+      {
+        "parameters":{
+          "url":"https://cms.mardenseo.com/wp-json/menus/v1/menus/main-menu",
+          "options":{
+            "fullResponse":true,
+            "responseFormat":"json"
+          }
+        },
+        "name":"Get WordPress Menu",
+        "type":"n8n-nodes-base.httpRequest",
+        "typeVersion":1,
+        "position":[600,900],
+        "id":"f9b5def1-35c6-4ed2-9a62-95e2943b3f81"
+      },
+      {
+        "parameters":{
+          "functionCode":"// Format WordPress menu data for React\nconst menuData = $input.body;\n\nif (!menuData || !menuData.items) {\n  return { success: false, message: 'Menu not found or empty' };\n}\n\n// Transform menu items to a more frontend-friendly structure\nconst transformedItems = menuData.items.map(item => ({\n  id: item.ID,\n  title: item.title,\n  url: item.url,\n  target: item.target,\n  classes: item.classes,\n  parentId: item.menu_item_parent !== '0' ? parseInt(item.menu_item_parent) : null,\n  order: parseInt(item.menu_order)\n}));\n\n// Build a hierarchical structure\nconst menuTree = [];\nconst lookup = {};\n\n// First, create a lookup table\ntransformedItems.forEach(item => {\n  lookup[item.id] = { ...item, children: [] };\n});\n\n// Then, build the tree\ntransformedItems.forEach(item => {\n  if (item.parentId === null) {\n    menuTree.push(lookup[item.id]);\n  } else {\n    lookup[item.parentId].children.push(lookup[item.id]);\n  }\n});\n\n// Sort by order\nconst sortByOrder = (a, b) => a.order - b.order;\nmenuTree.sort(sortByOrder);\nmenuTree.forEach(item => {\n  if (item.children && item.children.length > 0) {\n    item.children.sort(sortByOrder);\n  }\n});\n\nreturn { success: true, menu: menuTree };"
+        },
+        "name":"Format Menu Data",
+        "type":"n8n-nodes-base.function",
+        "typeVersion":1,
+        "position":[820,900],
+        "id":"b5c2f371-f4c2-4bc0-8101-6a4fc73fa52a"
+      },
+      {
+        "parameters":{
+          "options":{
+            "responseCode":200,
+            "responseContentType":"application/json"
+          }
+        },
+        "name":"Return Menu",
+        "type":"n8n-nodes-base.respondToWebhook",
+        "typeVersion":1,
+        "position":[1020,900],
+        "id":"9834c7d1-fcb2-4d40-bb10-a8cc01e3fb31"
+      }
+    ],
+    "connections":{
+      "Content API Endpoint":{
+        "main":[
+          [
+            {
+              "node":"WordPress Posts",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "WordPress Posts":{
+        "main":[
+          [
+            {
+              "node":"Transform for Frontend",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Transform for Frontend":{
+        "main":[
+          [
+            {
+              "node":"HTTP Response",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Form Submission API":{
+        "main":[
+          [
+            {
+              "node":"Validate Form",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Validate Form":{
+        "main":[
+          [
+            {
+              "node":"Is Form Valid?",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Is Form Valid?":{
+        "main":[
+          [
+            {
+              "node":"Send to WordPress",
+              "type":"main",
+              "index":0
+            }
+          ],
+          [
+            {
+              "node":"Return Error",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Send to WordPress":{
+        "main":[
+          [
+            {
+              "node":"Return Success",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Authentication API":{
+        "main":[
+          [
+            {
+              "node":"WordPress JWT Auth",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "WordPress JWT Auth":{
+        "main":[
+          [
+            {
+              "node":"Auth Successful?",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Auth Successful?":{
+        "main":[
+          [
+            {
+              "node":"Auth Success Response",
+              "type":"main",
+              "index":0
+            }
+          ],
+          [
+            {
+              "node":"Auth Error Response",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Menu API Endpoint":{
+        "main":[
+          [
+            {
+              "node":"Get WordPress Menu",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Get WordPress Menu":{
+        "main":[
+          [
+            {
+              "node":"Format Menu Data",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      },
+      "Format Menu Data":{
+        "main":[
+          [
+            {
+              "node":"Return Menu",
+              "type":"main",
+              "index":0
+            }
+          ]
+        ]
+      }
+    },
+    "settings":{},
+    "staticData":null,
+    "meta":null,
+    "pinData":{},
+    "versionId":"9f47b731-1bd5-4468-9d4d-8927f5e76f96",
+    "triggerCount":7,
+    "tags":[]
+  }
+]
