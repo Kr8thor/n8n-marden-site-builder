@@ -1,0 +1,102 @@
+{
+  "name": "WordPress Content Retrieval",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/api/content",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "resource": "posts",
+        "returnAll": false,
+        "limit": 10,
+        "additionalFields": {
+          "_embed": true
+        }
+      },
+      "name": "WordPress",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ],
+      "credentials": {
+        "wordpressApi": "WordPress API"
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format WordPress data for React\nreturn items.map(item => {\n  const post = item.json;\n  return {\n    id: post.id,\n    title: post.title.rendered,\n    slug: post.slug,\n    content: post.content.rendered,\n    excerpt: post.excerpt.rendered,\n    featuredImage: post._embedded && \n                 post._embedded['wp:featuredmedia'] ? \n                 post._embedded['wp:featuredmedia'][0].source_url : null,\n    author: post._embedded && \n           post._embedded.author ? \n           post._embedded.author[0].name : null,\n    date: post.date\n  };\n});"
+      },
+      "name": "Format Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Respond To Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress": {
+      "main": [
+        [
+          {
+            "node": "Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data": {
+      "main": [
+        [
+          {
+            "node": "Respond To Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

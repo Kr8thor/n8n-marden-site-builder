@@ -1,0 +1,159 @@
+{
+  "name": "WordPress Form Submission",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/api/forms/submit",
+        "options": {
+          "allowedMethods": [
+            "POST"
+          ],
+          "rawBody": true
+        }
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate form data\nconst { name, email, message } = $input.body;\nif (!name || !email || !message) {\n  return { valid: false, error: 'Missing required fields' };\n}\nif (!email.match(/^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { valid: false, error: 'Invalid email format' };\n}\nreturn { valid: true, data: $input.body };"
+      },
+      "name": "Validate Form",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.data.wordpress_url ? $json.data.wordpress_url : 'https://cms.mardenseo.com'}}/wp-json/myapp/v1/form-submission",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "body": "={{$json.data}}",
+        "options": {}
+      },
+      "name": "Send to WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": "WordPress API Key"
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Form submitted successfully\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": $json.error || \"Form validation failed\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Form": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "Send to WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to WordPress": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
