@@ -1,0 +1,4 @@
+// GTM Implementation Guide 
+  
+Add this code to your index.html head section:  
+ 
