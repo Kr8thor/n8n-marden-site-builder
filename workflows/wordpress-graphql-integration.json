@@ -1,0 +1,480 @@
+[{
+  "id": "4CoggHF1MBJV6Txm",
+  "name": "WordPress-React Integration (GraphQL)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "myapp/v1/content",
+        "options": {}
+      },
+      "name": "Content API Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 300],
+      "id": "36b6770d-845b-4e34-979f-d5dae6af4836",
+      "webhookId": "f2998f10-d049-4284-ba87-cbe321c9baec"
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/graphql",
+        "requestMethod": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "query",
+              "value": "query GetPosts {\n  posts(first: 10) {\n    nodes {\n      id\n      title\n      slug\n      content\n      excerpt\n      date\n      featuredImage {\n        node {\n          sourceUrl\n        }\n      }\n      author {\n        node {\n          name\n        }\n      }\n      categories {\n        nodes {\n          id\n          name\n          slug\n        }\n      }\n      tags {\n        nodes {\n          id\n          name\n          slug\n        }\n      }\n    }\n  }\n}"
+            }
+          ]
+        },
+        "options": {
+          "fullResponse": true
+        }
+      },
+      "name": "GraphQL Posts Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "id": "d480aacb-de08-4451-95b7-67418c6b5f09"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format GraphQL data for React\nconst response = $input.body;\n\nif (response && response.data && response.data.posts && response.data.posts.nodes) {\n  return response.data.posts.nodes.map(post => {\n    return {\n      id: post.id,\n      title: post.title,\n      slug: post.slug,\n      content: post.content,\n      excerpt: post.excerpt,\n      featuredImage: post.featuredImage?.node?.sourceUrl || null,\n      author: post.author?.node?.name || null,\n      date: post.date,\n      categories: post.categories?.nodes?.map(cat => ({\n        id: cat.id,\n        name: cat.name,\n        slug: cat.slug\n      })) || [],\n      tags: post.tags?.nodes?.map(tag => ({\n        id: tag.id,\n        name: tag.name,\n        slug: tag.slug\n      })) || []\n    };\n  });\n} else {\n  return [];\n}"
+      },
+      "name": "Transform for Frontend",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [820, 300],
+      "id": "be9ce390-6b26-47a4-a4d5-97f4ecb7576f"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "HTTP Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 300],
+      "id": "29bfc3f2-c5f1-4eaa-aa88-d9957dad91ef"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myapp/v1/form-submission",
+        "options": {}
+      },
+      "name": "Form Submission API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 500],
+      "id": "7352edd7-fc98-4a10-8c04-8038b6ae0e52",
+      "webhookId": "6a6d74a1-f2b8-4ce0-ab41-6fb5e0449681"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate form data\nconst { name, email, message } = $input.body;\nif (!name || !email || !message) {\n  return { valid: false, error: 'Missing required fields' };\n}\nif (!email.match(/^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { valid: false, error: 'Invalid email format' };\n}\n\n// Add additional validation as needed\nreturn { valid: true, data: $input.body };"
+      },
+      "name": "Validate Form",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [600, 500],
+      "id": "fc1d3147-8531-4203-afeb-6086f3518af1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"valid\"]}}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "name": "Is Form Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [820, 500],
+      "id": "0397d0c6-e38c-4e1a-82b3-84aff442c94d"
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/graphql",
+        "requestMethod": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "query",
+              "value": "mutation CreateFormSubmission($name: String!, $email: String!, $message: String!) {\n  createFormSubmission(input: {name: $name, email: $email, message: $message}) {\n    success\n    message\n  }\n}"
+            },
+            {
+              "name": "variables",
+              "value": "={{ JSON.stringify({name: $json.data.name, email: $json.data.email, message: $json.data.message}) }}"
+            }
+          ]
+        },
+        "options": {
+          "fullResponse": true
+        }
+      },
+      "name": "GraphQL Form Submission",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1020, 440],
+      "id": "3e8e1efb-ae37-43e5-8ed9-7a04a22073e0"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": "={{$json.statusCode || 400}}"
+        }
+      },
+      "name": "Return Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 580],
+      "id": "31d0cf13-cc6b-498b-b599-259302ee184a"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1240, 440],
+      "id": "469ff6b7-c92b-4af6-a44f-3d8a73149577"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myapp/v1/auth",
+        "options": {}
+      },
+      "name": "Authentication API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 700],
+      "id": "a2f8cdba-4d7b-4e21-b5dd-e3fa9e673f91",
+      "webhookId": "ee079831-3b16-4e8a-90f5-19ea9deed0c0"
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/graphql",
+        "requestMethod": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "query",
+              "value": "mutation Login($username: String!, $password: String!) {\n  login(input: {username: $username, password: $password}) {\n    authToken\n    user {\n      id\n      name\n      email\n    }\n  }\n}"
+            },
+            {
+              "name": "variables",
+              "value": "={{ JSON.stringify({username: $json.body.username, password: $json.body.password}) }}"
+            }
+          ]
+        },
+        "options": {
+          "fullResponse": true
+        }
+      },
+      "name": "GraphQL Authentication",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [600, 700],
+      "id": "c4e763a4-d5d6-4e14-80e2-3db93b7e6f2c"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process GraphQL authentication response\nconst response = $json.body;\n\nif (response && response.data && response.data.login && response.data.login.authToken) {\n  return {\n    success: true,\n    token: response.data.login.authToken,\n    user: response.data.login.user\n  };\n} else {\n  return {\n    success: false,\n    message: response.errors ? response.errors[0].message : 'Authentication failed'\n  };\n}"
+      },
+      "name": "Process Auth Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [780, 700],
+      "id": "67a9d2e3-12e5-4f90-ae73-1c14ef456cd2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.success}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Auth Successful?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [960, 700],
+      "id": "67a9d2e3-12e5-4f90-ae73-1c14ef456cd2"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Auth Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1140, 640],
+      "id": "fe8a723b-b673-452a-ad09-3e904ac69b1f"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "name": "Auth Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1140, 760],
+      "id": "2a58fde4-c3c0-4be1-b5eb-9d3a2f8e1fb5"
+    },
+    {
+      "parameters": {
+        "path": "myapp/v1/menu",
+        "options": {}
+      },
+      "name": "Menu API Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 900],
+      "id": "df6af2d9-c761-4acf-ae16-e68f7a8e4b5c",
+      "webhookId": "0eaa5657-ad81-44fb-8275-71395ae31a28"
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/graphql",
+        "requestMethod": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "query",
+              "value": "query GetMenu($location: MenuLocationEnum) {\n  menus(where: {location: $location}) {\n    nodes {\n      id\n      name\n      menuItems {\n        nodes {\n          id\n          label\n          url\n          path\n          parentId\n          childItems {\n            nodes {\n              id\n              label\n              url\n              path\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+            },
+            {
+              "name": "variables",
+              "value": "{\"location\": \"PRIMARY\"}"
+            }
+          ]
+        },
+        "options": {
+          "fullResponse": true
+        }
+      },
+      "name": "GraphQL Menu Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [600, 900],
+      "id": "f9b5def1-35c6-4ed2-9a62-95e2943b3f81"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format GraphQL menu data for React\nconst response = $input.body;\n\nif (response && response.data && response.data.menus && response.data.menus.nodes && response.data.menus.nodes.length > 0) {\n  const menu = response.data.menus.nodes[0];\n  \n  // Build a hierarchical menu structure\n  const menuItems = menu.menuItems.nodes.filter(item => !item.parentId);\n  \n  // Process each top-level menu item\n  const processedMenu = menuItems.map(item => {\n    return {\n      id: item.id,\n      label: item.label,\n      url: item.url,\n      path: item.path,\n      children: item.childItems?.nodes?.map(child => ({\n        id: child.id,\n        label: child.label,\n        url: child.url,\n        path: child.path\n      })) || []\n    };\n  });\n  \n  return {\n    success: true,\n    menu: {\n      id: menu.id,\n      name: menu.name,\n      items: processedMenu\n    }\n  };\n} else {\n  return { success: false, message: 'Menu not found or empty' };\n}"
+      },
+      "name": "Format Menu Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [820, 900],
+      "id": "b5c2f371-f4c2-4bc0-8101-6a4fc73fa52a"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Return Menu",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 900],
+      "id": "9834c7d1-fcb2-4d40-bb10-a8cc01e3fb31"
+    }
+  ],
+  "connections": {
+    "Content API Endpoint": {
+      "main": [
+        [
+          {
+            "node": "GraphQL Posts Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GraphQL Posts Query": {
+      "main": [
+        [
+          {
+            "node": "Transform for Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform for Frontend": {
+      "main": [
+        [
+          {
+            "node": "HTTP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form Submission API": {
+      "main": [
+        [
+          {
+            "node": "Validate Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Form": {
+      "main": [
+        [
+          {
+            "node": "Is Form Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Form Valid?": {
+      "main": [
+        [
+          {
+            "node": "GraphQL Form Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GraphQL Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authentication API": {
+      "main": [
+        [
+          {
+            "node": "GraphQL Authentication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GraphQL Authentication": {
+      "main": [
+        [
+          {
+            "node": "Process Auth Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Auth Response": {
+      "main": [
+        [
+          {
+            "node": "Auth Successful?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Successful?": {
+      "main": [
+        [
+          {
+            "node": "Auth Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Menu API Endpoint": {
+      "main": [
+        [
+          {
+            "node": "GraphQL Menu Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GraphQL Menu Query": {
+      "main": [
+        [
+          {
+            "node": "Format Menu Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Menu Data": {
+      "main": [
+        [
+          {
+            "node": "Return Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "2cb5cb47-23f0-47e9-bf4f-d67fd8453a45",
+  "triggerCount": 4,
+  "tags": []
+}]

@@ -1,0 +1,534 @@
+{
+  "name": "WordPress-React Integration",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "myapp/v1/content",
+        "options": {
+          "responseMode": "lastNode",
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "Content API Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 300],
+      "webhookId": "f2998f10-d049-4284-ba87-cbe321c9baec"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "resource": "posts",
+        "returnAll": false,
+        "limit": 10,
+        "additionalFields": {
+          "_embed": true
+        }
+      },
+      "name": "WordPress Posts",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "credentials": {
+        "wordpressApi": {
+          "id": "QsrjBL5EKkFPkQ4E",
+          "name": "WordPress account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format WordPress data for React\nreturn items.map(item => {\n  const post = item.json;\n  return {\n    id: post.id,\n    title: post.title.rendered,\n    slug: post.slug,\n    content: post.content.rendered,\n    excerpt: post.excerpt.rendered,\n    featuredImage: post._embedded && \n                post._embedded['wp:featuredmedia'] ? \n                post._embedded['wp:featuredmedia'][0].source_url : null,\n    author: post._embedded && \n           post._embedded.author ? \n           post._embedded.author[0].name : null,\n    date: post.date,\n    categories: post._embedded && \n              post._embedded['wp:term'] ? \n              post._embedded['wp:term'][0].map(cat => ({\n                id: cat.id,\n                name: cat.name,\n                slug: cat.slug\n              })) : [],\n    tags: post._embedded && \n         post._embedded['wp:term'] && \n         post._embedded['wp:term'][1] ? \n         post._embedded['wp:term'][1].map(tag => ({\n           id: tag.id,\n           name: tag.name,\n           slug: tag.slug\n         })) : []\n  };\n});"
+      },
+      "name": "Transform for Frontend",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [820, 300]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET",
+                "Cache-Control": "public, max-age=300"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "HTTP Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myapp/v1/form-submission",
+        "options": {
+          "responseMode": "lastNode",
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "Form Submission API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 500],
+      "webhookId": "6a6d74a1-f2b8-4ce0-ab41-6fb5e0449681"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Add security check for API secret\nconst headers = $node[\"Form Submission API\"].json.headers;\nconst apiSecret = headers[\"x-api-secret\"] || headers[\"X-API-SECRET\"];\n\nif (!apiSecret || apiSecret !== \"marden-api-secret\") {\n  return {\n    valid: false,\n    error: \"Unauthorized: Invalid API secret\",\n    statusCode: 403\n  };\n}\n\n// Validate form data\nconst { name, email, message } = $input.body;\nif (!name || !email || !message) {\n  return { \n    valid: false, \n    error: 'Missing required fields',\n    statusCode: 400\n  };\n}\nif (!email.match(/^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,}$/)) {\n  return { \n    valid: false, \n    error: 'Invalid email format',\n    statusCode: 400\n  };\n}\n\n// Basic rate limiting\nconst ip = $node[\"Form Submission API\"].json.headers[\"x-forwarded-for\"] || \"unknown\";\nconst now = new Date().getTime();\nconst key = `form_submission_${ip}`;\n\nlet counter = $workflow.variables.getworkflows.limiter || {};\n\nif (counter[key] && counter[key].count >= 5 && (now - counter[key].timestamp) < 3600000) {\n  // More than 5 submissions in the last hour\n  return {\n    valid: false,\n    error: 'Rate limit exceeded. Please try again later.',\n    statusCode: 429\n  };\n}\n\n// Update rate limiter\nif (!counter[key]) {\n  counter[key] = {\n    count: 1,\n    timestamp: now\n  };\n} else {\n  if ((now - counter[key].timestamp) >= 3600000) {\n    // Reset if it's been more than an hour\n    counter[key] = {\n      count: 1,\n      timestamp: now\n    };\n  } else {\n    counter[key].count++;\n  }\n}\n\n$workflow.variables.setWorflow(\"limiter\", counter);\n\n// Add additional validation as needed\nreturn { valid: true, data: $input.body };"
+      },
+      "name": "Validate Form",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [600, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"valid\"]}}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "name": "Is Form Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [820, 500]
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/wp-json/myapp/v1/form-submission",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "options": {
+          "fullResponse": true,
+          "responseFormat": "json",
+          "timeout": 20,
+          "retry": {
+            "maxTries": 3,
+            "retryDelay": 1000
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "name",
+              "value": "={{$json.data.name}}"
+            },
+            {
+              "name": "email",
+              "value": "={{$json.data.email}}"
+            },
+            {
+              "name": "message",
+              "value": "={{$json.data.message}}"
+            },
+            {
+              "name": "source",
+              "value": "n8n-middleware"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISOString()}}"
+            }
+          ]
+        }
+      },
+      "name": "Send to WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1020, 440],
+      "credentials": {
+        "headerAuth": {
+          "id": "XjwTDxJr2kGfgKzL",
+          "name": "WordPress Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": "={{$json.statusCode || 400}}",
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        },
+        "responseBody": "={ \"success\": false, \"message\": $json.error || \"Form validation failed\" }"
+      },
+      "name": "Return Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 580]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        },
+        "responseBody": "={ \"success\": true, \"message\": \"Form submitted successfully\" }"
+      },
+      "name": "Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1240, 440]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myapp/v1/auth",
+        "options": {
+          "responseMode": "lastNode",
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "Authentication API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 700]
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/wp-json/jwt-auth/v1/token",
+        "method": "POST",
+        "options": {
+          "fullResponse": true,
+          "responseFormat": "json",
+          "timeout": 10,
+          "retry": {
+            "maxTries": 2,
+            "retryDelay": 1000
+          }
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "username",
+              "value": "={{$json.body.username}}"
+            },
+            {
+              "name": "password",
+              "value": "={{$json.body.password}}"
+            }
+          ]
+        }
+      },
+      "name": "WordPress JWT Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [600, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.body.success}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Auth Successful?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [820, 700]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET, Authorization",
+                "Access-Control-Allow-Credentials": "true"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        },
+        "responseBody": "={{$json.body}}"
+      },
+      "name": "Auth Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 640]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 401,
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        },
+        "responseBody": "={ \"success\": false, \"message\": $json.body.message || \"Authentication failed\" }"
+      },
+      "name": "Auth Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 760]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "myapp/v1/menu",
+        "options": {
+          "responseMode": "lastNode",
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "Menu API Endpoint",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [380, 900]
+    },
+    {
+      "parameters": {
+        "url": "https://cms.mardenseo.com/wp-json/myapp/v1/menu",
+        "options": {
+          "fullResponse": true,
+          "responseFormat": "json",
+          "timeout": 10,
+          "retry": {
+            "maxTries": 2,
+            "retryDelay": 1000
+          }
+        }
+      },
+      "name": "Get WordPress Menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [600, 900]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format WordPress menu data for React\nconst menuData = $input.body;\n\nif (!menuData || !menuData.success) {\n  return { success: false, message: 'Menu not found or empty' };\n}\n\nreturn menuData;"
+      },
+      "name": "Format Menu Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [820, 900]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": {
+              "properties": {
+                "Access-Control-Allow-Origin": "https://mardenseo.com",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-SECRET",
+                "Cache-Control": "public, max-age=900"
+              }
+            }
+          },
+          "responseContentType": "application/json"
+        }
+      },
+      "name": "Return Menu",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1020, 900]
+    }
+  ],
+  "connections": {
+    "Content API Endpoint": {
+      "main": [
+        [
+          {
+            "node": "WordPress Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress Posts": {
+      "main": [
+        [
+          {
+            "node": "Transform for Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform for Frontend": {
+      "main": [
+        [
+          {
+            "node": "HTTP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form Submission API": {
+      "main": [
+        [
+          {
+            "node": "Validate Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Form": {
+      "main": [
+        [
+          {
+            "node": "Is Form Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Form Valid?": {
+      "main": [
+        [
+          {
+            "node": "Send to WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to WordPress": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authentication API": {
+      "main": [
+        [
+          {
+            "node": "WordPress JWT Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress JWT Auth": {
+      "main": [
+        [
+          {
+            "node": "Auth Successful?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Successful?": {
+      "main": [
+        [
+          {
+            "node": "Auth Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auth Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Menu API Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Get WordPress Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get WordPress Menu": {
+      "main": [
+        [
+          {
+            "node": "Format Menu Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Menu Data": {
+      "main": [
+        [
+          {
+            "node": "Return Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
