@@ -1,0 +1,27 @@
+{
+  "name": "wordpress-graphql-proxy",
+  "version": "1.0.0",
+  "description": "GraphQL proxy server for WordPress integration with React",
+  "main": "graphql-proxy-server.js",
+  "scripts": {
+    "start": "node graphql-proxy-server.js",
+    "dev": "nodemon graphql-proxy-server.js",
+    "test": "node test-proxy.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "author": "MardenSEO",
+  "license": "MIT"
+}
