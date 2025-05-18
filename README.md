@@ -1,10 +1,15 @@
 # Marden SEO Integration - README
 
-This repository contains a React+Vite frontend that integrates with a WordPress backend using n8n as middleware.
+This repository contains a React+Vite frontend that integrates with a WordPress backend using n8n as middleware, as well as a direct GraphQL proxy server implementation.
 
 ## Project Structure
 
 ```
+├── graphql-proxy/         # GraphQL Proxy Server implementation
+│   ├── graphql-proxy-server.js # Main server file
+│   ├── package.json       # Dependencies
+│   ├── ecosystem.config.js # PM2 configuration
+│   └── wordpress-integration.php # WordPress integration code
 ├── src/
 │   ├── components/         # Reusable components
 │   │   ├── ContactForm.jsx # Contact form with n8n integration
@@ -35,15 +40,31 @@ This repository contains a React+Vite frontend that integrates with a WordPress 
 - **Dynamic Menu**: Fetches navigation menu from WordPress
 - **Protected Routes**: Authentication-protected areas
 
+## Integration Options
+
+### 1. n8n Middleware (Original Implementation)
+
+Uses n8n workflows to connect the React frontend with WordPress backend.
+
+### 2. GraphQL Proxy Server (New Implementation)
+
+A lightweight Node.js server that transforms existing API requests into WordPress GraphQL queries without requiring frontend changes.
+
+#### GraphQL Proxy Features:
+- **Zero Frontend Changes**: Works with your existing frontend code
+- **GraphQL Performance**: Leverages the efficiency of GraphQL
+- **Debug Mode**: Includes mock data for development and testing
+- **Production Ready**: Includes PM2 configuration and Apache setup
+
 ## Setup Instructions
 
 ### Prerequisites
 
 1. WordPress site with REST API or GraphQL API enabled
-2. n8n instance running with the integration workflows
-3. Node.js and npm installed
+2. Node.js and npm installed
+3. For n8n option: n8n instance running with the integration workflows
 
-### Installation
+### Frontend Installation
 
 1. Clone the repository:
 ```bash
@@ -75,6 +96,41 @@ npm run dev
 
 2. Activate the integration workflows
 
+### GraphQL Proxy Server Setup
+
+1. Navigate to the graphql-proxy directory:
+```bash
+cd graphql-proxy
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Configure environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your settings
+```
+
+4. Start the server:
+```bash
+# For development
+npm run dev
+
+# For production with PM2
+npm install -g pm2
+pm2 start ecosystem.config.js
+```
+
+5. Configure Apache to proxy requests to the GraphQL proxy server:
+```apache
+# Include the apache-config.conf file in your Apache configuration
+```
+
+For detailed installation and configuration instructions, see the [GraphQL Proxy Implementation Guide](graphql-proxy/IMPLEMENTATION_GUIDE.md).
+
 ### WordPress Setup
 
 1. Install and configure the required WordPress plugins:
@@ -101,7 +157,9 @@ To deploy the application:
 npm run build
 ```
 
-2. Use the n8n deployment workflow to deploy the built files to your server
+2. Deploy the built files to your server:
+   - Option 1: Use the n8n deployment workflow
+   - Option 2: Use the GraphQL proxy server with Apache
 
 ## Credits
 
@@ -111,3 +169,4 @@ This integration was built using:
 - Vite
 - WordPress REST/GraphQL API
 - n8n automation platform
+- Node.js Express (for GraphQL proxy)
