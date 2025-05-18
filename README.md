@@ -1,68 +1,113 @@
-# Marden Site Builder - N8N Workflow
+# Marden SEO Integration - README
 
-This repository contains a complete N8N workflow for connecting a React+Vite frontend application to a WordPress backend. The workflow provides a set of API endpoints that make it easy to integrate WordPress content into any frontend application.
+This repository contains a React+Vite frontend that integrates with a WordPress backend using n8n as middleware.
 
-## Overview
+## Project Structure
 
-The Marden site builder workflow implements the middleware layer between a React+Vite frontend and a WordPress backend, following the architecture described in the "The seamless mesh: n8n, React+Vite, and WordPress integration" document.
+```
+├── src/
+│   ├── components/         # Reusable components
+│   │   ├── ContactForm.jsx # Contact form with n8n integration
+│   │   ├── Navbar.jsx      # Navigation with dynamic menu from WordPress
+│   │   └── ProtectedRoute.jsx # Auth guard for protected routes
+│   ├── contexts/
+│   │   └── AuthContext.jsx # Authentication state management
+│   ├── hooks/
+│   │   └── useWordPressData.js # Custom hook for fetching WordPress data
+│   ├── pages/
+│   │   ├── BlogPage.jsx    # Blog listing page
+│   │   ├── ContactPage.jsx # Contact page
+│   │   ├── DashboardPage.jsx # Protected dashboard page
+│   │   └── LoginPage.jsx   # Authentication page
+│   ├── services/
+│   │   └── api.js          # API service for n8n communication
+│   ├── App.jsx             # Main app component with routing
+│   └── main.jsx            # Entry point
+├── vite.config.js          # Vite configuration with proxy to n8n
+└── package.json            # Dependencies and scripts
+```
 
 ## Features
 
-- **Content Retrieval**: Fetch WordPress posts and pages with proper formatting for the React frontend
-- **Post Listing**: Get paginated lists of posts with filtering options
-- **Menu Retrieval**: Get WordPress navigation menus in a hierarchical format
-- **Authentication**: JWT-based authentication with token validation
-- **Form Submission**: Secure form submission with validation
-- **Single Post Fetching**: Fetch single post details with metadata
+- **Content Integration**: Fetches and displays WordPress posts
+- **Authentication**: JWT-based authentication with WordPress
+- **Form Submission**: Contact form that submits to WordPress
+- **Dynamic Menu**: Fetches navigation menu from WordPress
+- **Protected Routes**: Authentication-protected areas
 
-## Endpoints
+## Setup Instructions
 
-### Content Endpoints
+### Prerequisites
 
-- `GET /webhook/content` - Get all posts with full content
-- `GET /webhook/list-posts` - List posts with pagination and filtering
-- `GET /webhook/get-menus` - Get WordPress menus
-- `GET /webhook/post` - Get a single post by ID
+1. WordPress site with REST API or GraphQL API enabled
+2. n8n instance running with the integration workflows
+3. Node.js and npm installed
 
-### Authentication Endpoints
+### Installation
 
-- `POST /webhook/auth` - Authenticate with WordPress
-- `POST /webhook/auth/validate` - Validate JWT token
+1. Clone the repository:
+```bash
+git clone https://github.com/Kr8thor/n8n-marden-site-builder.git
+cd n8n-marden-site-builder
+```
 
-### Form Handling
+2. Install dependencies:
+```bash
+npm install
+```
 
-- `POST /webhook/forms/submit` - Submit form data to WordPress
+3. Create a `.env` file in the project root:
+```
+VITE_API_URL=http://localhost:5678
+```
 
-## Implementation Details
+4. Start the development server:
+```bash
+npm run dev
+```
 
-This workflow has been carefully redesigned to ensure all nodes are using supported types and connections are properly established. Key changes include:
+### n8n Workflow Setup
 
-1. Using standard HTTP Request nodes for WordPress API calls with Basic Auth
-2. Using Code nodes (replaces Function nodes) for data transformation
-3. Using proper respondToWebhook nodes for API responses
-4. Implementing secure form validation and submission
-5. Adding proper error handling and response formatting
+1. Import the following workflows into your n8n instance:
+   - WordPress-React Integration: Basic REST API integration
+   - WordPress-GraphQL Integration: Advanced GraphQL-based integration
+   - Marden SEO Website Deployment: Deployment automation workflow
 
-## Installation
+2. Activate the integration workflows
 
-1. Import the workflow JSON file into your N8N instance
-2. Configure HTTP Basic Auth credentials for WordPress API access
-3. Activate the workflow
+### WordPress Setup
 
-## Configuration
+1. Install and configure the required WordPress plugins:
+   - JWT Authentication for WP REST API
+   - Advanced Custom Fields (ACF)
+   - WP REST API Controller
+   - WP REST Cache
+   - WPGraphQL (for GraphQL integration)
 
-You need to update the following credentials in the workflow:
+2. Add the necessary code to your theme's functions.php file (see implementation guide)
 
-1. Configure WordPress Basic Auth credentials in n8n
-2. Update `YOUR_SHARED_SECRET_HERE` for form submissions
-3. Review and customize API endpoints as needed
+## Development
 
-## Requirements
+- **API Service**: Modify `src/services/api.js` to adapt to your API endpoints
+- **Styling**: The project uses Tailwind CSS for styling
+- **Deployment**: Use the n8n deployment workflow to automate the build and deployment process
 
-- N8N v1.0.0 or later
-- WordPress with REST API enabled
-- JWT Authentication for WP REST API plugin
+## Deployment
 
-## License
+To deploy the application:
 
-MIT
+1. Build the frontend:
+```bash
+npm run build
+```
+
+2. Use the n8n deployment workflow to deploy the built files to your server
+
+## Credits
+
+This integration was built using:
+
+- React
+- Vite
+- WordPress REST/GraphQL API
+- n8n automation platform
